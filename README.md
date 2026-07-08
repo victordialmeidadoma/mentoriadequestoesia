@@ -58,7 +58,7 @@ Substitua pelos valores copiados no passo anterior.
 Após criar o usuário no Supabase Auth (ou pelo invite), rode no SQL Editor:
 
 ```sql
-update perfis set role = 'mentor' where id = 'uuid-do-usuario-aqui';
+update perfis set role = 'mentor' where id = '48a29c20-5c2d-4b99-8171-dd8c388dace6';
 ```
 
 Todos os outros usuários criados são `aluno` por padrão.

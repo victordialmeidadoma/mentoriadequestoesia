@@ -1059,7 +1059,8 @@ document.getElementById('printsModalConfirmar').onclick = async ()=>{
   let qtd=0;
   for(let i=0;i<files.length;i++){
     const tag = document.getElementById('tag-'+i)?.value||'Sem tag';
-    const path = `${usuarioAtual.id}/${Date.now()}-${i}-${files[i].name}`;
+    const safeName = files[i].name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${usuarioAtual.id}/${Date.now()}-${i}-${safeName}`;
     const { error: upErr } = await _supabase.storage.from('prints').upload(path, files[i], { contentType: files[i].type });
     if(!upErr){
       await _supabase.from('prints').insert({
@@ -1347,7 +1348,8 @@ document.getElementById('uploadPrintsConfirmar').onclick=async ()=>{
     const f=uploadPrintsArquivos[i];
     const materia=document.getElementById('umateria-'+i).value;
     const tag=document.getElementById('utag-'+i).value||'Sem tag';
-    const path=`${usuarioAtual.id}/${Date.now()}-${i}-${f.name}`;
+    const safeName=f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path=`${usuarioAtual.id}/${Date.now()}-${i}-${safeName}`;
     const { error:upErr } = await _supabase.storage.from('prints').upload(path,f,{contentType:f.type});
     if(!upErr) await _supabase.from('prints').insert({aluno_id:usuarioAtual.id,materia,tag,publico:false,storage_path:path});
   }

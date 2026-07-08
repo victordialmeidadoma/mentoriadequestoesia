@@ -500,10 +500,6 @@
     <div class="login-error" id="loginError" style="display:none;"></div>
 
     <button class="btn" id="loginBtn" style="width:100%;justify-content:center;margin-top:6px;">Entrar</button>
-    <button class="btn ghost" id="loginGoogleBtn" style="width:100%;justify-content:center;margin-top:10px;display:flex;align-items:center;gap:8px;">
-      <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 16.1 3 9.3 7.6 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.3l-6.2-5.2C29.2 36.1 26.7 37 24 37c-5.3 0-9.7-3.4-11.3-8l-6.5 5C9.2 40.3 16 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.9-2.9 5.3-5.5 6.9l6.2 5.2C39.8 36.7 43 31 43 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
-      Continuar com Google
-    </button>
     <p class="login-footnote">Acesso protegido por Supabase Auth.</p>
   </div>
 </div>
@@ -725,9 +721,711 @@
 </div>
 
 <script>
+// ===================== SUPABASE =====================
+const _supabase = supabase.createClient(
+  'https://agxamsmyztmyesctiqkm.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFneGFtc215enRteWVzY3RpcWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MzA0NTAsImV4cCI6MjA5OTEwNjQ1MH0.pZ7vmOZkY-be9L3w1i6nPSnWzWnwEzLtFU1-ysrdhRM'
+);
+
 // ===================== STATE =====================
-let horasSemanais = 20;
 function calcMeta(h){ return Math.round((h*60)/30); }
+let horasSemanais = 20;
+let direcionamentos = [];
+let direcAtivoId = null;
+let blocosExpandidos = new Set();
+let editais = [];
+let editalTopicosImportados = null;
+let printsAluno = [];
+let feedPrints = [];
+let printIdCounter = 1;
+let printsViewAtual = 'meus';
+let printsFiltroMateria = 'todas';
+let uploadPrintsArquivos = [];
+let usuarioAtual = null;
+let perfilAtual = null;
+
+// ===================== EDITAL (parse CSV — mantido) =====================
+function parseLinhaCSV(linha, delim){
+  const out=[]; let cur=''; let dentroAspas=false;
+  for(let i=0;i<linha.length;i++){
+    const c=linha[i];
+    if(c==='"'){dentroAspas=!dentroAspas;continue;}
+    if(c===delim&&!dentroAspas){out.push(cur);cur='';continue;}
+    cur+=c;
+  }
+  out.push(cur);
+  return out.map(s=>s.trim());
+}
+function parseEditalCSV(texto){
+  const linhas=texto.split('\n').map(l=>l.replace(/\r$/,'')).filter(l=>l.trim());
+  if(linhas.length===0) return [];
+  const header=parseLinhaCSV(linhas[0],';').map(h=>h.toLowerCase());
+  const start=header[0]==='materia'?1:0;
+  const topicos=[];
+  for(let i=start;i<linhas.length;i++){
+    const cols=parseLinhaCSV(linhas[i],';');
+    if(!cols[0]||!cols[1]) continue;
+    topicos.push({materia:cols[0].trim(),assunto:cols[1].trim()});
+  }
+  return topicos;
+}
+
+let modalBlocoId = null;
+let mentorAlunoIdx = null;
+
+// ===================== HELPERS =====================
+function statusLabel(s){ return s==='feito'?'Feito':s==='planejado'?'Pré-agendado':s==='andamento'?'Em andamento':'Pendente'; }
+
+function pctOf(direc){
+  const feitos = (direc.blocos||[]).filter(b=>b.etapa===4).length;
+  return Math.min(100, Math.round((feitos/(direc.meta_blocos||1))*100));
+}
+
+function loading(id, msg='Carregando...'){
+  const el = document.getElementById(id);
+  if(el) el.innerHTML = `<div class="empty">${msg}</div>`;
+}
+
+// ===================== CARREGA PERFIL DO SUPABASE =====================
+async function carregarPerfil(){
+  const { data: perfil, error } = await _supabase
+    .from('perfis')
+    .select('*')
+    .eq('id', usuarioAtual.id)
+    .single();
+  if(error || !perfil) return;
+  perfilAtual = perfil;
+  horasSemanais = perfil.horas_semanais || 20;
+  renderPerfil();
+}
+
+function renderPerfil(){
+  if(!perfilAtual) return;
+  const nome = perfilAtual.nome || usuarioAtual.email;
+  const iniciais = nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+  document.querySelector('.profile-hero .avatar').textContent = iniciais;
+  document.querySelector('.profile-hero .nome').textContent = nome;
+  document.querySelector('.profile-hero .foco').textContent =
+    perfilAtual.carreiras?.length
+      ? 'Foco: '+perfilAtual.carreiras.join(', ')
+      : 'Foco não definido';
+  document.getElementById('pHoras').textContent = horasSemanais+'h / semana';
+  document.getElementById('horasInput').value = horasSemanais;
+  // stats
+  const atual = direcionamentos.find(d=>d.status==='atual');
+  document.getElementById('pPct').innerHTML = atual
+    ? pctOf(atual)+'<span class="unit">%</span>'
+    : '—';
+  const todosFeitos = direcionamentos.flatMap(d=>d.blocos||[]).filter(b=>b.etapa===4);
+  document.getElementById('pTotalBlocos').textContent = todosFeitos.length;
+  const media = todosFeitos.length
+    ? Math.round(todosFeitos.reduce((s,b)=>s+(b.acertos||0),0)/todosFeitos.length*10)
+    : 0;
+  document.getElementById('pAprov').innerHTML = todosFeitos.length
+    ? media+'<span class="unit">%</span>' : '—';
+  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+}
+
+document.getElementById('recalcularBtn').onclick = async () => {
+  horasSemanais = parseFloat(document.getElementById('horasInput').value)||20;
+  await _supabase.from('perfis').update({ horas_semanais: horasSemanais }).eq('id', usuarioAtual.id);
+  renderPerfil();
+};
+
+// ===================== DIRECIONAMENTOS =====================
+async function carregarDirecionamentos(){
+  loading('direcList','Carregando direcionamentos...');
+  const { data, error } = await _supabase
+    .from('direcionamentos')
+    .select('*, blocos(*)')
+    .eq('aluno_id', usuarioAtual.id)
+    .order('created_at', { ascending: false });
+  if(error){ console.error(error); return; }
+  direcionamentos = data || [];
+  renderDirecList();
+  renderPerfil();
+}
+
+function renderDirecList(){
+  document.getElementById('heroSemanas').textContent = direcionamentos.length;
+  const todosFeitos = direcionamentos.flatMap(d=>d.blocos||[]).filter(b=>b.etapa===4);
+  document.getElementById('heroBlocos').textContent = todosFeitos.length;
+  const media = todosFeitos.length
+    ? Math.round(todosFeitos.reduce((s,b)=>s+(b.acertos||0),0)/todosFeitos.length*10)
+    : 0;
+  document.getElementById('heroAprov').textContent = todosFeitos.length ? media+'%' : '—';
+
+  const list = document.getElementById('direcList');
+  list.innerHTML = '';
+  const R=26, C=2*Math.PI*R;
+  if(direcionamentos.length===0){
+    list.innerHTML = `<div class="empty"><span class="display">Nenhum direcionamento ainda</span>Seu mentor vai criar o primeiro direcionamento da semana.</div>`;
+    return;
+  }
+  direcionamentos.forEach(d=>{
+    const feitos = (d.blocos||[]).filter(b=>b.etapa===4);
+    const pct = pctOf(d);
+    const offset = C-(C*pct/100);
+    const aprov = feitos.length
+      ? Math.round(feitos.reduce((s,b)=>s+(b.acertos||0),0)/feitos.length*10)
+      : null;
+    const disciplinas = [...new Set((d.blocos||[]).map(b=>b.disciplina))];
+    const div = document.createElement('div');
+    div.className='direc-card '+d.status;
+    div.innerHTML = `
+      <div class="ring">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle class="track" cx="32" cy="32" r="${R}"/>
+          <circle class="fill" cx="32" cy="32" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="ring-label">${pct}%</div>
+      </div>
+      <div class="info">
+        <div class="titulo-row">
+          <span class="titulo">Direcionamento ${d.numero}</span>
+          <span class="badge-status ${d.status}">${d.status==='atual'?'<span class="pulse"></span>Em andamento':'Encerrado'}</span>
+        </div>
+        <div class="carreira">${d.carreira}</div>
+        <div class="sub">${d.periodo||''} · ${feitos.length} de ${d.meta_blocos||0} blocos concluídos</div>
+      </div>
+      <div class="stats-mini">
+        <span class="aprov">${aprov!==null?`<b>${aprov}%</b> de acerto`:'sem dados'}</span>
+      </div>
+      <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    `;
+    div.onclick = ()=> openDirecionamento(d.id);
+    list.appendChild(div);
+  });
+}
+
+function openDirecionamento(id){
+  direcAtivoId = id;
+  document.querySelectorAll('#navAluno button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#mainAluno > section').forEach(s=>s.style.display='none');
+  document.getElementById('tab-blocos').style.display='block';
+  renderBlocos();
+}
+
+document.getElementById('voltarDirecBtn').onclick = ()=>{
+  document.getElementById('tab-blocos').style.display='none';
+  document.getElementById('tab-direcionamentos').style.display='block';
+  document.querySelector('#navAluno button[data-tab="direcionamentos"]').classList.add('active');
+};
+
+// ===================== BLOCOS =====================
+function renderBlocos(){
+  const direc = direcionamentos.find(d=>d.id===direcAtivoId);
+  if(!direc) return;
+  document.getElementById('blocosPeriodoTitulo').textContent = 'Direcionamento '+direc.numero+' · '+(direc.periodo||'');
+  document.getElementById('contadorBlocos').textContent =
+    `${(direc.blocos||[]).length} blocos · meta de ${direc.meta_blocos||0} na semana`;
+  const pct = pctOf(direc);
+  document.getElementById('progressoBar').style.width = pct+'%';
+  document.getElementById('progressoPctTxt').textContent = pct+'%';
+
+  const list = document.getElementById('blocoList');
+  list.innerHTML = '';
+  if(!(direc.blocos||[]).length){
+    list.innerHTML = `<div class="empty"><span class="display">Nenhum bloco ainda</span>Seu mentor ainda não importou os blocos desta semana.</div>`;
+    return;
+  }
+  direc.blocos.forEach(b=>{
+    const statusKey = b.etapa===4?'feito':b.etapa>0?'andamento':b.pre_agendado?'planejado':'pendente';
+    const expanded = blocosExpandidos.has(b.id);
+    const div = document.createElement('div');
+    div.className='bloco'+(expanded?' expanded':'');
+    div.innerHTML = `
+      <div class="bloco-header" data-toggle="${b.id}">
+        <div class="bloco-codigo">Bloco ${b.codigo}</div>
+        <div class="bloco-info">
+          <div class="nome">${b.disciplina}</div>
+          <div class="meta">${b.etapa===4?`${b.acertos||0}/10 acertos`:'10 questões · ~30min'}${b.prints_count?` · ${b.prints_count} print${b.prints_count>1?'s':''}`  :''}</div>
+        </div>
+        ${b.acertos!==null&&b.etapa===4?`<div class="acertos-circle">${b.acertos}<span class="den">/10</span></div>`:''}
+        <div class="bloco-status ${statusKey}">${statusLabel(statusKey)}</div>
+        <svg class="bloco-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      ${expanded?renderEtapas(b,direcAtivoId):''}
+    `;
+    list.appendChild(div);
+  });
+}
+
+function nodeClass(passo,etapaAtual){
+  if(etapaAtual>=passo) return 'done';
+  if(etapaAtual===passo-1) return 'active';
+  return '';
+}
+
+function renderEtapas(b){
+  const e=b.etapa;
+  const check=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const trophy=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M7 4h10v3a5 5 0 01-10 0V4z" stroke="currentColor" stroke-width="1.8"/><path d="M7 5H4a3 3 0 003 3M17 5h3a3 3 0 01-3 3" stroke="currentColor" stroke-width="1.8"/><path d="M12 12v4M9 20h6M10 16h4v4h-4v-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+  let action='';
+  if(e===0){
+    action=`<div class="step-action center-btn"><button class="btn" data-action="iniciar" data-codigo="${b.id}">Iniciar bloco</button></div>`;
+  }else if(e===1){
+    const boxes=Array.from({length:11},(_,i)=>i).map(n=>`<div class="acertos-box" data-action="salvar-acertos" data-codigo="${b.id}" data-val="${n}">${n}</div>`).join('');
+    action=`<div class="step-action"><div class="ask">Quantas das 10 questões você acertou?</div><div class="acertos-grid">${boxes}</div></div>`;
+  }else if(e===2){
+    action=`<div class="step-action">
+      <div class="dropzone" data-action="abrir-prints" data-codigo="${b.id}">
+        <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M7 9l5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <div class="dz-title">Arraste os prints aqui ou clique para selecionar</div>
+        <div class="dz-sub">Já ficam marcados como ${b.disciplina}</div>
+      </div>
+      <input type="file" id="fileInput-${b.id}" multiple accept="image/*" style="display:none">
+    </div>`;
+  }else if(e===3){
+    action=`<div class="step-action center-btn"><button class="trophy-btn" data-action="finalizar" data-codigo="${b.id}">${trophy} Finalizar bloco</button></div>`;
+  }else{
+    action=`<div class="step-action"><div class="concluido-msg">${trophy} Bloco concluído</div></div>`;
+  }
+  return `<div class="etapas">
+    <div class="stepper">
+      <div class="step-node ${nodeClass(1,e)}"><div class="step-circle">${e>=1?check:'1'}</div><div class="step-label">Iniciar bloco</div></div>
+      <div class="step-node ${nodeClass(2,e)}"><div class="step-circle">${e>=2?check:'2'}</div><div class="step-label">Percentual de acertos</div></div>
+      <div class="step-node ${nodeClass(3,e)}"><div class="step-circle">${e>=3?check:'3'}</div><div class="step-label">Adicionar prints</div></div>
+      <div class="step-node trophy ${nodeClass(4,e)}"><div class="step-circle">${e>=4?check:trophy}</div><div class="step-label">Finalizar</div></div>
+    </div>
+    ${action}
+  </div>`;
+}
+
+async function atualizarBloco(blocoId, campos){
+  await _supabase.from('blocos').update(campos).eq('id', blocoId);
+  // atualiza local
+  const direc = direcionamentos.find(d=>d.id===direcAtivoId);
+  const bloco = direc.blocos.find(b=>b.id===blocoId);
+  Object.assign(bloco, campos);
+  renderBlocos();
+  renderPerfil();
+}
+
+document.getElementById('blocoList').addEventListener('click', async (e)=>{
+  const toggle = e.target.closest('[data-toggle]');
+  const btn = e.target.closest('[data-action]');
+  if(btn){
+    const id=btn.dataset.codigo, action=btn.dataset.action;
+    const direc=direcionamentos.find(d=>d.id===direcAtivoId);
+    const bloco=direc.blocos.find(b=>b.id===id);
+    if(action==='iniciar'){ window.open(bloco.link,'_blank'); await atualizarBloco(id,{etapa:1}); }
+    if(action==='salvar-acertos'){ await atualizarBloco(id,{acertos:parseInt(btn.dataset.val),etapa:2}); }
+    if(action==='abrir-prints'){ document.getElementById('fileInput-'+id).click(); }
+    if(action==='finalizar'){ await atualizarBloco(id,{etapa:4}); }
+    return;
+  }
+  if(toggle){
+    const key=toggle.dataset.toggle;
+    if(blocosExpandidos.has(key)) blocosExpandidos.delete(key);
+    else blocosExpandidos.add(key);
+    renderBlocos();
+  }
+});
+
+document.getElementById('blocoList').addEventListener('change', (e)=>{
+  if(e.target.matches('input[type=file]')){
+    const id=e.target.id.replace('fileInput-','');
+    if(e.target.files.length) abrirModalPrints(id, Array.from(e.target.files));
+  }
+});
+document.getElementById('blocoList').addEventListener('dragover',(e)=>{ const dz=e.target.closest('.dropzone'); if(dz){e.preventDefault();dz.classList.add('dragover');} });
+document.getElementById('blocoList').addEventListener('dragleave',(e)=>{ const dz=e.target.closest('.dropzone'); if(dz) dz.classList.remove('dragover'); });
+document.getElementById('blocoList').addEventListener('drop',(e)=>{
+  const dz=e.target.closest('.dropzone');
+  if(dz){ e.preventDefault(); dz.classList.remove('dragover');
+    const id=dz.dataset.codigo;
+    if(e.dataTransfer.files.length) abrirModalPrints(id,Array.from(e.dataTransfer.files));
+  }
+});
+
+// ===================== PRINTS (modal dentro do bloco) =====================
+let printsModalCodigo = null;
+function abrirModalPrints(blocoId, files){
+  printsModalCodigo = blocoId;
+  const direc = direcionamentos.find(d=>d.id===direcAtivoId);
+  const bloco = direc?.blocos.find(b=>b.id===blocoId);
+  const body = document.getElementById('printsModalBody');
+  body.innerHTML = files.map((f,i)=>`
+    <div class="print-row" data-idx="${i}">
+      <div class="print-thumb" id="thumb-${i}">···</div>
+      <div class="field-col">
+        <div class="fname">${f.name}</div>
+        <label>Tag deste print</label>
+        <input class="tag-input" placeholder="ex: erro recorrente, súmula 473" id="tag-${i}">
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('printsModalCount').textContent =
+    `${files.length} print${files.length>1?'s':''} · matéria: ${bloco?.disciplina||''}`;
+  document.getElementById('printsModalOverlay').style.display='flex';
+  files.forEach((f,i)=>{
+    const reader=new FileReader();
+    reader.onload=(ev)=>{ const t=document.getElementById('thumb-'+i); if(t) t.innerHTML=`<img src="${ev.target.result}" alt="">`; };
+    if(f.type&&f.type.startsWith('image/')) reader.readAsDataURL(f);
+  });
+  // salva referência dos arquivos para o confirmar
+  document.getElementById('printsModalOverlay').dataset.files = '';
+  document.getElementById('printsModalOverlay')._files = files;
+}
+
+document.getElementById('printsModalCancelar').onclick = ()=> document.getElementById('printsModalOverlay').style.display='none';
+
+document.getElementById('printsModalConfirmar').onclick = async ()=>{
+  const files = document.getElementById('printsModalOverlay')._files || [];
+  const direc = direcionamentos.find(d=>d.id===direcAtivoId);
+  const bloco = direc?.blocos.find(b=>b.id===printsModalCodigo);
+  let qtd=0;
+  for(let i=0;i<files.length;i++){
+    const tag = document.getElementById('tag-'+i)?.value||'Sem tag';
+    const path = `${usuarioAtual.id}/${Date.now()}-${i}-${files[i].name}`;
+    const { error: upErr } = await _supabase.storage.from('prints').upload(path, files[i], { contentType: files[i].type });
+    if(!upErr){
+      await _supabase.from('prints').insert({
+        aluno_id: usuarioAtual.id,
+        bloco_id: printsModalCodigo,
+        materia: bloco?.disciplina||'Geral',
+        tag, publico: false,
+        storage_path: path
+      });
+      qtd++;
+    }
+  }
+  if(qtd>0) await atualizarBloco(printsModalCodigo, { etapa:3, prints_count:(bloco?.prints_count||0)+qtd });
+  document.getElementById('printsModalOverlay').style.display='none';
+};
+
+// ===================== DIA DE ESTUDOS =====================
+let diaEtapa=1;
+document.getElementById('iniciarDiaBtn').onclick = ()=>{
+  diaEtapa=1; renderDiaModal();
+  document.getElementById('diaModalOverlay').style.display='flex';
+};
+document.getElementById('diaModalFechar').onclick = ()=> document.getElementById('diaModalOverlay').style.display='none';
+
+function renderDiaModal(){
+  const direc = direcionamentos.find(d=>d.status==='atual');
+  if(!direc){ document.getElementById('diaBody1').innerHTML='<div class="empty-step">Nenhum direcionamento ativo.</div>'; return; }
+  document.getElementById('diaStep1').className='dia-step';
+  document.getElementById('diaStep2').className='dia-step'+(diaEtapa<2?' locked':'');
+  document.getElementById('diaCheck1').className='dia-step-num'+(diaEtapa>1?' done':'');
+  document.getElementById('diaCheck2').className='dia-step-num'+(diaEtapa>2?' done':'');
+  const body1=document.getElementById('diaBody1');
+  const printsPend=(direc.blocos||[]).filter(b=>b.prints_count>0);
+  body1.innerHTML=(printsPend.length===0
+    ?'<div class="empty-step">Nenhum print novo para revisar hoje.</div>'
+    :printsPend.map(b=>`<div class="dia-print-mini"><div class="print-thumb">📄</div><div><div class="tag">${b.disciplina}</div><div class="disc">${b.prints_count} print${b.prints_count>1?'s':''}</div></div></div>`).join('')
+  )+`<button class="btn small" id="diaAvancar1" style="margin-top:12px;">Marcar revisão como concluída</button>`;
+  document.getElementById('diaAvancar1').onclick=()=>{ diaEtapa=2; renderDiaModal(); };
+  const body2=document.getElementById('diaBody2');
+  const preAgendados=(direc.blocos||[]).filter(b=>b.pre_agendado&&b.etapa===0);
+  if(diaEtapa<2){ body2.innerHTML=''; return; }
+  body2.innerHTML=preAgendados.length===0
+    ?'<div class="empty-step">Nenhum bloco pré-agendado.</div>'
+    :preAgendados.map(b=>`<div class="dia-bloco-mini"><span class="l"><span class="cod">${b.codigo}</span>${b.disciplina}</span><button class="btn small" data-action="ir-bloco" data-id="${b.id}">Iniciar bloco</button></div>`).join('');
+}
+
+document.getElementById('diaModalOverlay').addEventListener('click', async (e)=>{
+  const btn=e.target.closest('[data-action="ir-bloco"]');
+  if(!btn) return;
+  const direc=direcionamentos.find(d=>d.status==='atual');
+  await atualizarBloco(btn.dataset.id,{etapa:1});
+  document.getElementById('diaModalOverlay').style.display='none';
+  direcAtivoId=direc.id;
+  blocosExpandidos.add(btn.dataset.id);
+  document.querySelectorAll('#navAluno button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#mainAluno > section').forEach(s=>s.style.display='none');
+  document.getElementById('tab-blocos').style.display='block';
+  renderBlocos();
+});
+
+// ===================== NAV TABS =====================
+document.querySelectorAll('#navAluno button[data-tab]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#navAluno button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#mainAluno > section').forEach(s=>s.style.display='none');
+    document.getElementById('tab-'+btn.dataset.tab).style.display='block';
+  });
+});
+
+// ===================== EDITAL: ALUNO =====================
+async function carregarEdital(){
+  const { data: vinculos } = await _supabase
+    .from('edital_vinculos')
+    .select('edital_id')
+    .eq('aluno_id', usuarioAtual.id);
+  if(!vinculos?.length){
+    document.getElementById('editalSubtitulo').textContent='Seu mentor ainda não vinculou um edital';
+    document.getElementById('editalConteudo').innerHTML=`<div class="empty"><span class="display">Nenhum edital vinculado</span></div>`;
+    return;
+  }
+  const ids = vinculos.map(v=>v.edital_id);
+  const { data: eds } = await _supabase.from('editais').select('*').in('id', ids);
+  editais = eds||[];
+  renderEditalAluno();
+}
+
+async function renderEditalAluno(){
+  const conteudo=document.getElementById('editalConteudo');
+  conteudo.innerHTML='<div class="empty">Carregando...</div>';
+  const html = await Promise.all(editais.map(async (ed,idx)=>{
+    const { data: topicos } = await _supabase.from('edital_topicos').select('*, edital_topico_progresso(*)').eq('edital_id', ed.id);
+    const total=topicos?.length||0;
+    const vistos=(topicos||[]).filter(t=>(t.edital_topico_progresso||[]).some(p=>p.aluno_id===usuarioAtual.id&&p.frequencia>0)).length;
+    const pct=total?Math.round((vistos/total)*100):0;
+    const totalQ=(topicos||[]).reduce((s,t)=>s+((t.edital_topico_progresso||[]).find(p=>p.aluno_id===usuarioAtual.id)?.frequencia||0),0);
+    const porMateria={};
+    (topicos||[]).forEach(t=>{ (porMateria[t.materia]=porMateria[t.materia]||[]).push(t); });
+    const linhas=Object.keys(porMateria).map(mat=>{
+      return `<tr class="materia-row"><td colspan="3">${mat}</td></tr>`
+        +porMateria[mat].map(t=>{
+          const prog=(t.edital_topico_progresso||[]).find(p=>p.aluno_id===usuarioAtual.id);
+          const freq=prog?.frequencia||0;
+          return `<tr><td>${t.assunto}</td>
+            <td>${freq>0?`<span class="visto-yes"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Visto</span>`:'<span class="visto-no">Não visto</span>'}</td>
+            <td><span class="freq-pill">${freq} questõe${freq===1?'':'s'}</span></td></tr>`;
+        }).join('');
+    }).join('');
+    return `<div style="margin-bottom:34px;">
+      <div class="section-head" style="margin-top:${idx===0?'0':'34px'};"><h2>${ed.concurso}</h2>
+        <span class="hint">${ed.cargo?ed.cargo+' · ':''}${ed.banca?'Banca '+ed.banca:''}</span></div>
+      <div class="edital-dash">
+        <div class="card stat-card"><div class="label">Cobertura do edital</div><div class="value">${pct}<span class="unit">%</span></div></div>
+        <div class="card stat-card"><div class="label">Assuntos vistos</div><div class="value">${vistos}<span class="unit">/ ${total}</span></div></div>
+        <div class="card stat-card"><div class="label">Questões feitas</div><div class="value">${totalQ}</div></div>
+        <div class="card stat-card"><div class="label">Data da prova</div><div class="value" style="font-size:20px;">${ed.data_prova||'a definir'}</div></div>
+      </div>
+      <table class="edital-table">
+        <thead><tr><th>Assunto</th><th>Status</th><th>Frequência</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table></div>`;
+  }));
+  conteudo.innerHTML=html.join('');
+  document.getElementById('editalSubtitulo').textContent=editais.length+' edital'+(editais.length>1?'is':'')+' vinculado'+(editais.length>1?'s':'');
+}
+
+document.querySelector('#navAluno button[data-tab="edital"]').addEventListener('click', carregarEdital);
+
+// ===================== PRINTS: ABA =====================
+async function carregarPrints(){
+  const { data: meus } = await _supabase
+    .from('prints')
+    .select('*')
+    .eq('aluno_id', usuarioAtual.id)
+    .order('created_at', { ascending: false });
+  printsAluno = await Promise.all((meus||[]).map(async p=>{
+    const { data } = await _supabase.storage.from('prints').createSignedUrl(p.storage_path, 3600);
+    return { ...p, img: data?.signedUrl||null, cor:'#0B6E4F' };
+  }));
+
+  const { data: pub } = await _supabase
+    .from('prints')
+    .select('*, perfis(nome)')
+    .eq('publico', true)
+    .neq('aluno_id', usuarioAtual.id)
+    .order('created_at', { ascending: false });
+  feedPrints = await Promise.all((pub||[]).map(async p=>{
+    const { data } = await _supabase.storage.from('prints').createSignedUrl(p.storage_path, 3600);
+    return { ...p, img: data?.signedUrl||null, autor: p.perfis?.nome||'Colega', cor:'#2563A8' };
+  }));
+
+  renderPrintsChips();
+  renderPrintsView();
+}
+
+function renderPrintsChips(){
+  const materias=[...new Set(printsAluno.map(p=>p.materia))];
+  document.getElementById('printsChips').innerHTML =
+    `<div class="p-chip ${printsFiltroMateria==='todas'?'active':''}" data-materia="todas">Todas</div>`
+    +materias.map(m=>`<div class="p-chip ${printsFiltroMateria===m?'active':''}" data-materia="${m}">${m}</div>`).join('');
+}
+
+document.getElementById('printsChips').addEventListener('click',(e)=>{
+  const chip=e.target.closest('.p-chip'); if(!chip) return;
+  printsFiltroMateria=chip.dataset.materia;
+  renderPrintsChips(); renderPrintsView();
+});
+
+document.querySelectorAll('.prints-subnav button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.prints-subnav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    printsViewAtual=btn.dataset.pview;
+    document.getElementById('abrirUploadPrintsBtn').style.display=printsViewAtual==='meus'?'inline-flex':'none';
+    renderPrintsChips(); renderPrintsView();
+  });
+});
+
+document.getElementById('printsOrdem').addEventListener('change', renderPrintsView);
+
+function thumbHtml(p){
+  return p.img
+    ?`<img src="${p.img}" alt="print">`
+    :`<div class="pc-placeholder" style="background:${p.cor}22;color:${p.cor};">${p.materia}</div>`;
+}
+
+function renderPrintsView(){
+  const wrap=document.getElementById('printsView');
+  const ordem=document.getElementById('printsOrdem').value;
+  if(printsViewAtual==='meus'){
+    let lista=printsAluno.filter(p=>printsFiltroMateria==='todas'||p.materia===printsFiltroMateria);
+    lista=lista.slice().sort((a,b)=>ordem==='antigos'?a.created_at.localeCompare(b.created_at):b.created_at.localeCompare(a.created_at));
+    if(!lista.length){ wrap.innerHTML=`<div class="empty"><span class="display">Nenhum print ainda</span>Adicione prints durante a resolução de um bloco ou clique em "Adicionar prints".</div>`; return; }
+    wrap.innerHTML=`<div class="prints-grid">${lista.map(p=>`
+      <div class="print-card">
+        <div class="pc-img">${thumbHtml(p)}</div>
+        <div class="pc-body">
+          <div class="pc-materia">${p.materia}</div>
+          <div class="pc-tag">${p.tag||'—'}</div>
+          <div class="pc-meta">${p.created_at?.slice(0,10)||''}</div>
+          <div class="pc-actions">
+            <label class="toggle-label-wrap">
+              <div class="toggle-switch"><input type="checkbox" data-print-publico="${p.id}" ${p.publico?'checked':''}><span class="slider"></span></div>
+              Público
+            </label>
+          </div>
+        </div>
+      </div>`).join('')}</div>`;
+  } else {
+    let lista=feedPrints.filter(p=>printsFiltroMateria==='todas'||p.materia===printsFiltroMateria);
+    lista=lista.slice().sort((a,b)=>ordem==='antigos'?a.created_at.localeCompare(b.created_at):b.created_at.localeCompare(a.created_at));
+    wrap.innerHTML=`<div class="prints-grid">${lista.map(p=>`
+      <div class="print-card">
+        <div class="pc-img">${thumbHtml(p)}</div>
+        <div class="pc-body">
+          <div class="pc-materia">${p.materia}</div>
+          <div class="pc-tag">${p.tag||'—'}</div>
+          <div class="pc-autor">por ${p.autor}</div>
+          <div class="pc-actions" style="justify-content:flex-end;">
+            <button class="btn ghost small" data-compartilhar="${p.id}">Salvar na minha pasta</button>
+          </div>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+}
+
+document.getElementById('printsView').addEventListener('change', async (e)=>{
+  const chk=e.target.closest('[data-print-publico]'); if(!chk) return;
+  await _supabase.from('prints').update({publico:chk.checked}).eq('id',chk.dataset.printPublico);
+  const p=printsAluno.find(x=>x.id===chk.dataset.printPublico);
+  if(p) p.publico=chk.checked;
+});
+
+document.getElementById('printsView').addEventListener('click', async (e)=>{
+  const btn=e.target.closest('[data-compartilhar]'); if(!btn) return;
+  const original=feedPrints.find(p=>p.id===btn.dataset.compartilhar);
+  if(!original) return;
+  // copia o registro apontando para o mesmo storage_path
+  await _supabase.from('prints').insert({
+    aluno_id: usuarioAtual.id,
+    materia: original.materia,
+    tag: original.tag+' (de '+original.autor+')',
+    publico: false,
+    storage_path: original.storage_path
+  });
+  btn.textContent='Salvo ✓'; btn.disabled=true;
+  await carregarPrints();
+});
+
+// upload geral de prints
+const MATERIAS_PADRAO=['Direito Constitucional','Direito Administrativo','Direito Penal','Processo Civil','Processo Penal','Administração Geral e Pública'];
+
+document.getElementById('abrirUploadPrintsBtn').onclick=()=>{
+  uploadPrintsArquivos=[];
+  document.getElementById('uploadPrintsBody').innerHTML='';
+  document.getElementById('uploadPrintsConfirmar').style.display='none';
+  document.getElementById('uploadPrintsModalOverlay').style.display='flex';
+};
+document.getElementById('uploadPrintsCancelar').onclick=()=> document.getElementById('uploadPrintsModalOverlay').style.display='none';
+document.getElementById('uploadPrintsDropzone').onclick=()=> document.getElementById('uploadPrintsFileInput').click();
+document.getElementById('uploadPrintsFileInput').onchange=(e)=>{ if(e.target.files.length) montarLinhasUpload(Array.from(e.target.files)); };
+document.getElementById('uploadPrintsDropzone').addEventListener('dragover',(e)=>{ e.preventDefault(); e.currentTarget.classList.add('dragover'); });
+document.getElementById('uploadPrintsDropzone').addEventListener('dragleave',(e)=> e.currentTarget.classList.remove('dragover'));
+document.getElementById('uploadPrintsDropzone').addEventListener('drop',(e)=>{ e.preventDefault(); e.currentTarget.classList.remove('dragover'); if(e.dataTransfer.files.length) montarLinhasUpload(Array.from(e.dataTransfer.files)); });
+
+function montarLinhasUpload(files){
+  uploadPrintsArquivos=files;
+  document.getElementById('uploadPrintsBody').innerHTML=files.map((f,i)=>`
+    <div class="print-row" data-idx="${i}">
+      <div class="print-thumb" id="uthumb-${i}">···</div>
+      <div class="field-col">
+        <div class="fname">${f.name}</div>
+        <label>Matéria</label>
+        <select class="tag-input" id="umateria-${i}" style="margin-bottom:8px;">${MATERIAS_PADRAO.map(m=>`<option>${m}</option>`).join('')}</select>
+        <label>Tag</label>
+        <input class="tag-input" placeholder="ex: erro recorrente" id="utag-${i}">
+      </div>
+    </div>`).join('');
+  document.getElementById('uploadPrintsConfirmar').style.display='inline-flex';
+  files.forEach((f,i)=>{ const r=new FileReader(); r.onload=(ev)=>{ const t=document.getElementById('uthumb-'+i); if(t) t.innerHTML=`<img src="${ev.target.result}">`; }; if(f.type?.startsWith('image/')) r.readAsDataURL(f); });
+}
+
+document.getElementById('uploadPrintsConfirmar').onclick=async ()=>{
+  for(let i=0;i<uploadPrintsArquivos.length;i++){
+    const f=uploadPrintsArquivos[i];
+    const materia=document.getElementById('umateria-'+i).value;
+    const tag=document.getElementById('utag-'+i).value||'Sem tag';
+    const path=`${usuarioAtual.id}/${Date.now()}-${i}-${f.name}`;
+    const { error:upErr } = await _supabase.storage.from('prints').upload(path,f,{contentType:f.type});
+    if(!upErr) await _supabase.from('prints').insert({aluno_id:usuarioAtual.id,materia,tag,publico:false,storage_path:path});
+  }
+  document.getElementById('uploadPrintsModalOverlay').style.display='none';
+  await carregarPrints();
+};
+
+document.querySelector('#navAluno button[data-tab="prints"]').addEventListener('click', carregarPrints);
+
+// ===================== SUPABASE AUTH =====================
+function mostrarErro(msg){
+  const el=document.getElementById('loginError');
+  el.textContent=msg; el.style.display='block';
+}
+
+function entrarNoApp(email){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  document.getElementById('userEmailLabel').textContent=email;
+}
+
+async function inicializarApp(session){
+  usuarioAtual = session.user;
+  await carregarPerfil();
+  await carregarDirecionamentos();
+  entrarNoApp(session.user.email);
+}
+
+_supabase.auth.getSession().then(async ({ data: { session } }) => {
+  if(!session) return;
+  const { data: perfil } = await _supabase.from('perfis').select('role').eq('id',session.user.id).single();
+  if(perfil?.role==='mentor'){ window.location.href='/admin.html'; return; }
+  await inicializarApp(session);
+});
+
+document.getElementById('loginBtn').onclick = async () => {
+  const email=document.getElementById('loginEmail').value.trim();
+  const senha=document.getElementById('loginPassword').value.trim();
+  if(!email||!senha){ mostrarErro('Preencha e-mail e senha.'); return; }
+  document.getElementById('loginError').style.display='none';
+  const btn=document.getElementById('loginBtn');
+  btn.textContent='Entrando...'; btn.disabled=true;
+  const { data, error } = await _supabase.auth.signInWithPassword({email, password:senha});
+  btn.textContent='Entrar'; btn.disabled=false;
+  if(error){ mostrarErro(error.message); return; }
+  const { data: perfil } = await _supabase.from('perfis').select('role').eq('id',data.user.id).single();
+  if(perfil?.role==='mentor'){ window.location.href='/admin.html'; return; }
+  await inicializarApp(data.session);
+};
+
+document.getElementById('logoutBtn').onclick = async () => {
+  await _supabase.auth.signOut();
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+};
+
+</script>
+</body>
+</html>
 
 const direcionamentos = [
   {
@@ -1479,13 +2177,6 @@ document.getElementById('loginBtn').onclick = async () => {
   }
 };
 
-// Login Google (OAuth)
-document.getElementById('loginGoogleBtn').onclick = async () => {
-  await _supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin + '/aluno.html' }
-  });
-};
 
 // Logout
 document.getElementById('logoutBtn').onclick = async () => {

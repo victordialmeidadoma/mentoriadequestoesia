@@ -431,13 +431,40 @@
   }
   .login-error{background:#FBEAE6;color:#B5503A;font-size:12.5px;padding:9px 12px;border-radius:8px;margin-bottom:14px;text-align:left;}
   .login-footnote{font-size:11px;color:var(--text-soft);margin-top:18px;line-height:1.5;}
+
+  /* ===== Loading screen ===== */
+  .loading-screen{
+    position:fixed;inset:0;background:var(--white);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:100;gap:18px;
+  }
+  .loading-logo{
+    width:44px;height:44px;border-radius:12px;background:var(--grad);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-family:'Outfit';font-weight:700;font-size:18px;
+    box-shadow:0 4px 14px rgba(11,110,79,.28);
+  }
+  .loading-spinner{
+    width:28px;height:28px;border:3px solid var(--g-soft);
+    border-top-color:var(--g1);border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .loading-text{font-size:13px;color:var(--text-soft);}
 </style>
 <!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<div class="login-wrap" id="loginScreen">
+<!-- Loading -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">M</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Carregando...</div>
+</div>
+
+<div class="login-wrap" id="loginScreen" style="display:none;">
   <div class="login-card">
     <div class="seal" style="margin:0 auto 18px;">M</div>
     <h1 class="display login-title">Painel do mentor</h1>
@@ -1118,15 +1145,25 @@ function mostrarErro(msg){
   el.textContent=msg; el.style.display='block';
 }
 
+function esconderLoading(){
+  document.getElementById('loadingScreen').style.display='none';
+}
+
 function entrarNoApp(email){
+  esconderLoading();
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('appShell').style.display='block';
   document.getElementById('userEmailLabel').textContent=email;
   carregarAlunos();
 }
 
+function mostrarLogin(){
+  esconderLoading();
+  document.getElementById('loginScreen').style.display='flex';
+}
+
 _supabase.auth.getSession().then(async ({ data: { session } }) => {
-  if(!session) return;
+  if(!session){ mostrarLogin(); return; }
   const { data: perfil } = await _supabase.from('perfis').select('role').eq('id',session.user.id).single();
   if(perfil?.role==='mentor'){
     usuarioAtual=session.user;
@@ -1134,6 +1171,7 @@ _supabase.auth.getSession().then(async ({ data: { session } }) => {
   } else {
     await _supabase.auth.signOut();
     mostrarErro('Esta conta não tem acesso ao painel do mentor.');
+    mostrarLogin();
   }
 });
 
@@ -1156,7 +1194,7 @@ document.getElementById('loginBtn').onclick = async () => {
 document.getElementById('logoutBtn').onclick = async () => {
   await _supabase.auth.signOut();
   document.getElementById('appShell').style.display='none';
-  document.getElementById('loginScreen').style.display='flex';
+  mostrarLogin();
 };
 
 </script>

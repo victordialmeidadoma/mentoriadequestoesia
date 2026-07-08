@@ -414,7 +414,26 @@
     .profile-hero{flex-direction:column;text-align:center;}
   }
 
-  /* ===== Login ===== */
+  /* ===== Loading screen ===== */
+  .loading-screen{
+    position:fixed;inset:0;background:var(--white);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:100;gap:18px;
+  }
+  .loading-logo{
+    width:44px;height:44px;border-radius:12px;background:var(--grad);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-family:'Outfit';font-weight:700;font-size:18px;
+    box-shadow:0 4px 14px rgba(11,110,79,.28);
+  }
+  .loading-spinner{
+    width:28px;height:28px;border:3px solid var(--g-soft);
+    border-top-color:var(--g1);border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .loading-text{font-size:13px;color:var(--text-soft);}
+</style>
   .login-wrap{
     min-height:100vh;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(160deg, var(--bg) 0%, var(--g-soft) 100%);padding:24px;
@@ -486,7 +505,14 @@
 </head>
 <body>
 
-<div class="login-wrap" id="loginScreen">
+<!-- Loading -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">M</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Carregando...</div>
+</div>
+
+<div class="login-wrap" id="loginScreen" style="display:none;">
   <div class="login-card">
     <div class="seal" style="margin:0 auto 18px;">M</div>
     <h1 class="display login-title">Entrar na mentoria</h1>
@@ -539,8 +565,8 @@
       <div class="profile-hero">
         <div class="avatar">VA</div>
         <div>
-          <div class="nome">Victor Andrade</div>
-          <div class="foco">Foco: Carreiras de Autoridade e Controle</div>
+          <div class="nome" id="perfilNome">—</div>
+          <div class="foco" id="perfilFoco"></div>
         </div>
       </div>
 
@@ -552,10 +578,10 @@
 
       <div class="section-head"><h2>Informações</h2></div>
       <div class="card">
-        <div class="info-row"><span class="k">Nome</span><span class="v">Victor Andrade</span></div>
+        <div class="info-row"><span class="k">Nome</span><span class="v" id="perfilNomeInfo">—</span></div>
         <div class="info-row"><span class="k">Concursos em foco</span><span class="v">Autoridade · Controle</span></div>
         <div class="info-row"><span class="k">Mentor</span><span class="v">—</span></div>
-        <div class="info-row"><span class="k">Início da mentoria</span><span class="v">Fev/2026</span></div>
+        <div class="info-row"><span class="k">Início da mentoria</span><span class="v" id="perfilInicio">—</span></div>
       </div>
 
     </section>
@@ -791,25 +817,32 @@ function renderPerfil(){
   if(!perfilAtual) return;
   const nome = perfilAtual.nome || usuarioAtual.email;
   const iniciais = nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-  document.querySelector('.profile-hero .avatar').textContent = iniciais;
-  document.querySelector('.profile-hero .nome').textContent = nome;
-  document.querySelector('.profile-hero .foco').textContent =
-    perfilAtual.carreiras?.length
-      ? 'Foco: '+perfilAtual.carreiras.join(', ')
-      : 'Foco não definido';
-  // stats
-  const atual = direcionamentos.find(d=>d.status==='atual');
-  document.getElementById('pPct').innerHTML = atual
-    ? pctOf(atual)+'<span class="unit">%</span>'
+  // hero
+  const avatarEl = document.querySelector('.profile-hero .avatar') || document.querySelector('.avatar');
+  if(avatarEl) avatarEl.textContent = iniciais;
+  const nomeHero = document.querySelector('.profile-hero .nome');
+  if(nomeHero) nomeHero.textContent = nome;
+  const focoHero = document.querySelector('.profile-hero .foco');
+  if(focoHero) focoHero.textContent = perfilAtual.carreiras?.length ? 'Foco: '+perfilAtual.carreiras.join(', ') : '';
+  // ids do card de informações
+  const nomeEl = document.getElementById('perfilNome');
+  const focoEl = document.getElementById('perfilFoco');
+  const nomeInfoEl = document.getElementById('perfilNomeInfo');
+  const inicioEl = document.getElementById('perfilInicio');
+  if(nomeEl) nomeEl.textContent = nome;
+  if(focoEl) focoEl.textContent = perfilAtual.carreiras?.length ? 'Foco: '+perfilAtual.carreiras.join(', ') : '';
+  if(nomeInfoEl) nomeInfoEl.textContent = nome;
+  if(inicioEl) inicioEl.textContent = perfilAtual.created_at
+    ? new Date(perfilAtual.created_at).toLocaleDateString('pt-BR',{month:'short',year:'numeric'})
     : '—';
+  // stats
+  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+  const atual = direcionamentos.find(d=>d.status==='atual');
+  document.getElementById('pPct').innerHTML = atual ? pctOf(atual)+'<span class="unit">%</span>' : '—';
   const todosFeitos = direcionamentos.flatMap(d=>d.blocos||[]).filter(b=>b.etapa===4);
   document.getElementById('pTotalBlocos').textContent = todosFeitos.length;
-  const media = todosFeitos.length
-    ? Math.round(todosFeitos.reduce((s,b)=>s+(b.acertos||0),0)/todosFeitos.length*10)
-    : 0;
-  document.getElementById('pAprov').innerHTML = todosFeitos.length
-    ? media+'<span class="unit">%</span>' : '—';
-  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+  const media = todosFeitos.length ? Math.round(todosFeitos.reduce((s,b)=>s+(b.acertos||0),0)/todosFeitos.length*10) : 0;
+  document.getElementById('pAprov').innerHTML = todosFeitos.length ? media+'<span class="unit">%</span>' : '—';
 }
 
 
@@ -1197,8 +1230,12 @@ async function carregarPrints(){
     .eq('aluno_id', usuarioAtual.id)
     .order('created_at', { ascending: false });
   printsAluno = await Promise.all((meus||[]).map(async p=>{
-    const { data } = await _supabase.storage.from('prints').createSignedUrl(p.storage_path, 3600);
-    return { ...p, img: data?.signedUrl||null, cor:'#0B6E4F' };
+    let imgUrl = null;
+    if(p.storage_path){
+      const { data } = await _supabase.storage.from('prints').createSignedUrl(p.storage_path, 86400);
+      imgUrl = data?.signedUrl || null;
+    }
+    return { ...p, img: imgUrl, cor:'#0B6E4F' };
   }));
 
   const { data: pub } = await _supabase
@@ -1208,8 +1245,12 @@ async function carregarPrints(){
     .neq('aluno_id', usuarioAtual.id)
     .order('created_at', { ascending: false });
   feedPrints = await Promise.all((pub||[]).map(async p=>{
-    const { data } = await _supabase.storage.from('prints').createSignedUrl(p.storage_path, 3600);
-    return { ...p, img: data?.signedUrl||null, autor: p.perfis?.nome||'Colega', cor:'#2563A8' };
+    let imgUrl2 = null;
+    if(p.storage_path){
+      const { data } = await _supabase.storage.from('prints').createSignedUrl(p.storage_path, 86400);
+      imgUrl2 = data?.signedUrl || null;
+    }
+    return { ...p, img: imgUrl2, autor: p.perfis?.nome||'Colega', cor:'#2563A8' };
   }));
 
   renderPrintsChips();
@@ -1365,10 +1406,20 @@ function mostrarErro(msg){
   el.textContent=msg; el.style.display='block';
 }
 
+function esconderLoading(){
+  document.getElementById('loadingScreen').style.display='none';
+}
+
 function entrarNoApp(email){
+  esconderLoading();
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('appShell').style.display='block';
   document.getElementById('userEmailLabel').textContent=email;
+}
+
+function mostrarLogin(){
+  esconderLoading();
+  document.getElementById('loginScreen').style.display='flex';
 }
 
 async function inicializarApp(session){
@@ -1379,7 +1430,7 @@ async function inicializarApp(session){
 }
 
 _supabase.auth.getSession().then(async ({ data: { session } }) => {
-  if(!session) return;
+  if(!session){ mostrarLogin(); return; }
   const { data: perfil } = await _supabase.from('perfis').select('role').eq('id',session.user.id).single();
   if(perfil?.role==='mentor'){ window.location.href='/admin.html'; return; }
   await inicializarApp(session);
@@ -1403,7 +1454,7 @@ document.getElementById('loginBtn').onclick = async () => {
 document.getElementById('logoutBtn').onclick = async () => {
   await _supabase.auth.signOut();
   document.getElementById('appShell').style.display='none';
-  document.getElementById('loginScreen').style.display='flex';
+  mostrarLogin();
 };
 
 </script>

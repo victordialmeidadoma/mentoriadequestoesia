@@ -843,27 +843,30 @@ document.getElementById('cadastrarAlunoConfirmar').onclick = async ()=>{
 
   const btn = document.getElementById('cadastrarAlunoConfirmar');
   btn.textContent='Cadastrando...'; btn.disabled=true;
+  erro.style.display='none';
 
-  // Cria o usuário via Supabase Auth (invite — envia e-mail com link de acesso)
-  const { data, error } = await _supabase.auth.admin?.inviteUserByEmail
-    ? await _supabase.auth.admin.inviteUserByEmail(email, {
-        data: { nome, role: 'aluno' }
-      })
-    : await _supabase.auth.signUp({
-        email,
-        password: Math.random().toString(36).slice(-10)+'A1!',
-        options: { data: { nome, role: 'aluno' }, emailRedirectTo: window.location.origin+'/aluno.html' }
-      });
+  // Pega o token do mentor logado para autenticar a Edge Function
+  const { data: { session } } = await _supabase.auth.getSession();
 
+  const res = await fetch(
+    'https://agxamsmyztmyesctiqkm.supabase.co/functions/v1/cadastrar-aluno',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ nome, email, foco })
+    }
+  );
+
+  const json = await res.json();
   btn.textContent='Cadastrar'; btn.disabled=false;
 
-  if(error){ erro.textContent = error.message; erro.style.display='block'; return; }
-
-  // Atualiza carreiras no perfil criado pelo trigger
-  if(data?.user?.id && foco){
-    await _supabase.from('perfis')
-      .update({ carreiras: foco.split(',').map(s=>s.trim()), mentor_id: usuarioAtual.id })
-      .eq('id', data.user.id);
+  if(!res.ok || json.error){
+    erro.textContent = json.error || 'Erro ao cadastrar.';
+    erro.style.display='block';
+    return;
   }
 
   document.getElementById('cadastrarAlunoModalOverlay').style.display='none';

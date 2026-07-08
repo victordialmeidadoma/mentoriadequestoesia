@@ -491,7 +491,7 @@
         <div class="card stat-card"><div class="label">Aproveitamento geral</div><div class="value" id="mAproveitamentoGeral">—</div></div>
       </div>
 
-      <div class="section-head"><h2>Alunos</h2><span class="hint">clique para ver detalhes e importar blocos</span></div>
+      <div class="section-head"><h2>Alunos</h2><button class="btn small" id="cadastrarAlunoBtn">Cadastrar aluno</button></div>
       <div id="alunoListMentor"></div>
 
       <div id="detalheAlunoMentor" style="display:none;margin-top:30px;">
@@ -609,6 +609,25 @@ DIREITO ADMINISTRATIVO;Atos administrativos;2"></textarea>
     </div>
   </div>
 </div>
+<!-- ===== MODAL: cadastrar aluno ===== -->
+<div class="modal-overlay" id="cadastrarAlunoModalOverlay" style="display:none;">
+  <div class="modal">
+    <h3 class="display">Cadastrar aluno</h3>
+    <p>O aluno receberá um e-mail para definir a senha de acesso.</p>
+    <label>Nome completo</label>
+    <input type="text" id="novoAlunoNome" placeholder="Ex: João Silva">
+    <label>E-mail</label>
+    <input type="email" id="novoAlunoEmail" placeholder="aluno@email.com">
+    <label>Foco / carreiras</label>
+    <input type="text" id="novoAlunoFoco" placeholder="Ex: Autoridade e Controle">
+    <div class="login-error" id="cadastroAlunoErro" style="display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cadastrarAlunoCancelar">Cancelar</button>
+      <button class="btn" id="cadastrarAlunoConfirmar">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="novoDirecModalOverlay" style="display:none;">
   <div class="modal">
     <h3 class="display">Novo direcionamento</h3>
@@ -805,6 +824,51 @@ document.getElementById('importarBtn').onclick = async () => {
 };
 
 document.getElementById('fecharDetalheBtn').onclick=()=> document.getElementById('detalheAlunoMentor').style.display='none';
+
+// ===================== CADASTRAR ALUNO =====================
+document.getElementById('cadastrarAlunoBtn').onclick = ()=>{
+  ['novoAlunoNome','novoAlunoEmail','novoAlunoFoco'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('cadastroAlunoErro').style.display='none';
+  document.getElementById('cadastrarAlunoModalOverlay').style.display='flex';
+};
+document.getElementById('cadastrarAlunoCancelar').onclick = ()=> document.getElementById('cadastrarAlunoModalOverlay').style.display='none';
+
+document.getElementById('cadastrarAlunoConfirmar').onclick = async ()=>{
+  const nome  = document.getElementById('novoAlunoNome').value.trim();
+  const email = document.getElementById('novoAlunoEmail').value.trim();
+  const foco  = document.getElementById('novoAlunoFoco').value.trim();
+  const erro  = document.getElementById('cadastroAlunoErro');
+
+  if(!nome || !email){ erro.textContent='Preencha nome e e-mail.'; erro.style.display='block'; return; }
+
+  const btn = document.getElementById('cadastrarAlunoConfirmar');
+  btn.textContent='Cadastrando...'; btn.disabled=true;
+
+  // Cria o usuário via Supabase Auth (invite — envia e-mail com link de acesso)
+  const { data, error } = await _supabase.auth.admin?.inviteUserByEmail
+    ? await _supabase.auth.admin.inviteUserByEmail(email, {
+        data: { nome, role: 'aluno' }
+      })
+    : await _supabase.auth.signUp({
+        email,
+        password: Math.random().toString(36).slice(-10)+'A1!',
+        options: { data: { nome, role: 'aluno' }, emailRedirectTo: window.location.origin+'/aluno.html' }
+      });
+
+  btn.textContent='Cadastrar'; btn.disabled=false;
+
+  if(error){ erro.textContent = error.message; erro.style.display='block'; return; }
+
+  // Atualiza carreiras no perfil criado pelo trigger
+  if(data?.user?.id && foco){
+    await _supabase.from('perfis')
+      .update({ carreiras: foco.split(',').map(s=>s.trim()), mentor_id: usuarioAtual.id })
+      .eq('id', data.user.id);
+  }
+
+  document.getElementById('cadastrarAlunoModalOverlay').style.display='none';
+  await carregarAlunos();
+};
 
 // ===================== ABA DIRECIONAMENTOS =====================
 function renderMDirecAlunoList(){

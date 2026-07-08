@@ -554,22 +554,10 @@
       <div class="card">
         <div class="info-row"><span class="k">Nome</span><span class="v">Victor Andrade</span></div>
         <div class="info-row"><span class="k">Concursos em foco</span><span class="v">Autoridade · Controle</span></div>
-        <div class="info-row"><span class="k">Disponibilidade semanal</span><span class="v" id="pHoras">20h / semana</span></div>
         <div class="info-row"><span class="k">Mentor</span><span class="v">—</span></div>
         <div class="info-row"><span class="k">Início da mentoria</span><span class="v">Fev/2026</span></div>
       </div>
 
-      <div class="section-head">
-        <h2>Disponibilidade</h2>
-        <span class="hint">usada para calcular sua meta de blocos por semana</span>
-      </div>
-      <div class="card" style="display:flex;align-items:end;gap:14px;">
-        <div style="flex:1;">
-          <label style="font-size:11.5px;color:var(--text-soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px;">Horas disponíveis na semana</label>
-          <input type="number" id="horasInput" value="20" min="1" max="60" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-family:'Inter';font-size:14px;background:var(--bg);">
-        </div>
-        <button class="btn" id="recalcularBtn">Salvar</button>
-      </div>
     </section>
 
     <!-- ===== DIRECIONAMENTOS (lista semanal) ===== -->
@@ -809,8 +797,6 @@ function renderPerfil(){
     perfilAtual.carreiras?.length
       ? 'Foco: '+perfilAtual.carreiras.join(', ')
       : 'Foco não definido';
-  document.getElementById('pHoras').textContent = horasSemanais+'h / semana';
-  document.getElementById('horasInput').value = horasSemanais;
   // stats
   const atual = direcionamentos.find(d=>d.status==='atual');
   document.getElementById('pPct').innerHTML = atual
@@ -826,11 +812,6 @@ function renderPerfil(){
   document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
 }
 
-document.getElementById('recalcularBtn').onclick = async () => {
-  horasSemanais = parseFloat(document.getElementById('horasInput').value)||20;
-  await _supabase.from('perfis').update({ horas_semanais: horasSemanais }).eq('id', usuarioAtual.id);
-  renderPerfil();
-};
 
 // ===================== DIRECIONAMENTOS =====================
 async function carregarDirecionamentos(){

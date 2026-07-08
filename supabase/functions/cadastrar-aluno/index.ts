@@ -20,16 +20,27 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Cliente com a chave do usuário logado (para checar se é mentor)
-    const supabaseUser = createClient(
+    // Cliente admin para tudo (usa service role)
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    const { data: perfil, error: perfilErr } = await supabaseUser
+    // Extrai o user id do JWT para verificar o role
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(token)
+
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: 'Token inválido' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    const { data: perfil, error: perfilErr } = await supabaseAdmin
       .from('perfis')
       .select('role, id')
+      .eq('id', user.id)
       .single()
 
     if (perfilErr || perfil?.role !== 'mentor') {
@@ -37,13 +48,6 @@ Deno.serve(async (req) => {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-
-    // Cliente admin com service role key (pode criar usuários)
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
 
     const { nome, email, foco } = await req.json()
 

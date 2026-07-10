@@ -121,18 +121,35 @@ document.getElementById('importarBtn').onclick = async () => {
   if(!raw||mentorAlunoIdx===null) return;
   const a=alunosMentor[mentorAlunoIdx];
   const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-  if(!dir){ alert('Este aluno não tem direcionamento ativo.'); return; }
-  const linhas=raw.split('\n').filter(l=>l.trim());
-  const inserts=linhas.map(l=>{
-    const [codigo,disciplina,link]=l.split(',');
+  if(!dir){ alert('Este aluno não tem direcionamento ativo.\nCrie um direcionamento primeiro na aba Direcionamentos.'); return; }
+  const linhas=raw.split('\n').map(l=>l.replace(/\r$/,'')).filter(l=>l.trim());
+  // Detecta separador e formato
+  const header=linhas[0].toLowerCase();
+  const sep=header.includes(';')?';':',';
+  // Formato TEC: cabeçalho com "data" e "nome"
+  const isTec=header.startsWith('data');
+  const start=isTec?1:0;
+  const inserts=linhas.slice(start).map(l=>{
+    const cols=l.split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
+    let codigo,disciplina,link;
+    if(isTec){
+      // Nome: "Bloco 03A - D05 - Direito Constitucional - ..."
+      const parts=(cols[1]||'').split(' - ');
+      codigo=(parts[0]||'').replace(/^bloco\s*/i,'').trim();
+      disciplina=(parts[2]||parts[1]||'').trim();
+      link=(cols[2]||'').trim();
+    } else {
+      [codigo,disciplina,link]=cols;
+    }
     if(!codigo||!disciplina) return null;
-    return {direcionamento_id:dir.id,aluno_id:a.id,codigo:codigo.trim(),disciplina:disciplina.trim(),link:(link||''  ).trim(),etapa:0};
+    return {direcionamento_id:dir.id,aluno_id:a.id,codigo,disciplina,link:link||'',etapa:0};
   }).filter(Boolean);
-  if(!inserts.length) return;
+  if(!inserts.length){ alert('Nenhuma linha válida encontrada no CSV.'); return; }
   const btn=document.getElementById('importarBtn');
-  btn.textContent='Importando...'; btn.disabled=true;
-  await _supabase.from('blocos').insert(inserts);
+  btn.textContent=`Importando ${inserts.length} blocos...`; btn.disabled=true;
+  const {error}=await _supabase.from('blocos').insert(inserts);
   btn.textContent='Importar blocos'; btn.disabled=false;
+  if(error){ alert('Erro ao importar: '+error.message); return; }
   document.getElementById('importarBlocosModal').style.display='none';
   await carregarAlunos();
   showDetalheAluno(mentorAlunoIdx);

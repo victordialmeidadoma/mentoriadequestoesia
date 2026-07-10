@@ -1,27 +1,11 @@
-// auth.js — login, logout e verificação de sessão
-// Usado por login.html e definir-senha.html
+// auth.js — sessão e autenticação compartilhada
 
-async function verificarSessaoERedirecionarAluno() {
-  const { data: { session } } = await _supabase.auth.getSession();
-  if (!session) return false;
-  const { data: perfil } = await _supabase.from('perfis').select('role').eq('id', session.user.id).single();
-  if (perfil?.role === 'mentor') {
-    window.location.href = '/admin/alunos.html';
-    return true;
-  }
-  window.location.href = '/aluno/perfil.html';
-  return true;
-}
+let usuarioAtual = null;
+let perfilAtual = null;
 
-async function verificarSessaoERedirecionarMentor() {
-  const { data: { session } } = await _supabase.auth.getSession();
-  if (!session) return false;
-  const { data: perfil } = await _supabase.from('perfis').select('role').eq('id', session.user.id).single();
-  if (perfil?.role === 'mentor') {
-    window.location.href = '/admin/alunos.html';
-    return true;
-  }
-  return false;
+function esconderLoading() {
+  const el = document.getElementById('loadingScreen');
+  if (el) el.style.display = 'none';
 }
 
 async function logout() {
@@ -29,24 +13,48 @@ async function logout() {
   window.location.href = '/login.html';
 }
 
-// Guarda o usuário logado em memória para usar nas páginas
-let usuarioAtual = null;
-let perfilAtual = null;
-
 async function carregarSessao(roleEsperado) {
-  const { data: { session } } = await _supabase.auth.getSession();
-  if (!session) { window.location.href = '/login.html'; return false; }
-  const { data: perfil } = await _supabase.from('perfis').select('*').eq('id', session.user.id).single();
-  if (!perfil || (roleEsperado && perfil.role !== roleEsperado)) {
+  try {
+    const { data: { session }, error: sessErr } = await _supabase.auth.getSession();
+    if (sessErr || !session) {
+      window.location.href = '/login.html';
+      return false;
+    }
+
+    usuarioAtual = session.user;
+
+    // Tenta buscar o perfil — com retry caso o RLS esteja causando delay
+    let perfil = null;
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      const { data, error } = await _supabase
+        .from('perfis')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      if (data) { perfil = data; break; }
+      if (error && error.code !== 'PGRST116') break; // erro que não seja "not found"
+      await new Promise(r => setTimeout(r, 400)); // espera 400ms e tenta de novo
+    }
+
+    if (!perfil) {
+      // Perfil não encontrado — pode ser usuário novo sem perfil ainda
+      window.location.href = '/login.html';
+      return false;
+    }
+
+    if (roleEsperado && perfil.role !== roleEsperado) {
+      // Role errado: redireciona para a área certa
+      if (perfil.role === 'mentor') window.location.href = '/admin/alunos.html';
+      else window.location.href = '/aluno/perfil.html';
+      return false;
+    }
+
+    perfilAtual = perfil;
+    return true;
+
+  } catch (e) {
+    console.error('Erro na sessão:', e);
     window.location.href = '/login.html';
     return false;
   }
-  usuarioAtual = session.user;
-  perfilAtual = perfil;
-  return true;
-}
-
-function esconderLoading() {
-  const el = document.getElementById('loadingScreen');
-  if (el) el.style.display = 'none';
 }

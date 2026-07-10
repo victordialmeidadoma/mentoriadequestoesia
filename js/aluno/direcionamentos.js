@@ -1,8 +1,17 @@
-// Depende de: config.js, auth.js (carregarSessao, usuarioAtual, perfilAtual, esconderLoading, logout)
+// Depende de: config.js, auth.js
 
-// ===================== DIRECIONAMENTOS =====================
+// ===================== STATE =====================
+function calcMeta(h){ return Math.round((h*60)/30); }
+let direcionamentos = [];
+
+function pctOf(direc){
+  const feitos = (direc.blocos||[]).filter(b=>b.etapa===4).length;
+  return Math.min(100, Math.round((feitos/(direc.meta_blocos||1))*100));
+}
+
+// ===================== CARREGAR =====================
 async function carregarDirecionamentos(){
-  loading('direcList','Carregando direcionamentos...');
+  document.getElementById('direcList').innerHTML = '<div class="empty">Carregando...</div>';
   const { data, error } = await _supabase
     .from('direcionamentos')
     .select('*, blocos(*)')
@@ -11,7 +20,6 @@ async function carregarDirecionamentos(){
   if(error){ console.error(error); return; }
   direcionamentos = data || [];
   renderDirecList();
-  renderPerfil();
 }
 
 function renderDirecList(){
@@ -19,36 +27,38 @@ function renderDirecList(){
   const todosFeitos = direcionamentos.flatMap(d=>d.blocos||[]).filter(b=>b.etapa===4);
   document.getElementById('heroBlocos').textContent = todosFeitos.length;
   const media = todosFeitos.length
-    ? Math.round(todosFeitos.reduce((s,b)=>s+(b.acertos||0),0)/todosFeitos.length*10)
-    : 0;
+    ? Math.round(todosFeitos.reduce((s,b)=>s+(b.acertos||0),0)/todosFeitos.length*10) : 0;
   document.getElementById('heroAprov').textContent = todosFeitos.length ? media+'%' : '—';
 
   const list = document.getElementById('direcList');
-  list.innerHTML = '';
-  const R=26, C=2*Math.PI*R;
-  if(direcionamentos.length===0){
-    list.innerHTML = `<div class="empty"><span class="display">Nenhum direcionamento ainda</span>Seu mentor vai criar o primeiro direcionamento da semana.</div>`;
+  if(!direcionamentos.length){
+    list.innerHTML = '<div class="empty"><span class="display">Nenhum direcionamento ainda</span>Seu mentor vai criar o primeiro direcionamento da semana.</div>';
     return;
   }
+
+  const R=26, C=2*Math.PI*R;
+  list.innerHTML = '';
   direcionamentos.forEach(d=>{
     const feitos = (d.blocos||[]).filter(b=>b.etapa===4);
     const pct = pctOf(d);
     const offset = C-(C*pct/100);
     const aprov = feitos.length
-      ? Math.round(feitos.reduce((s,b)=>s+(b.acertos||0),0)/feitos.length*10)
-      : null;
-    const disciplinas = [...new Set((d.blocos||[]).map(b=>b.disciplina))];
+      ? Math.round(feitos.reduce((s,b)=>s+(b.acertos||0),0)/feitos.length*10) : null;
+
     const div = document.createElement('div');
-    div.className='direc-card '+d.status;
+    div.className = 'direc-card clicavel';
     div.innerHTML = `
       <div class="ring">
         <svg width="64" height="64" viewBox="0 0 64 64">
-          <circle class="track" cx="32" cy="32" r="${R}"/>
-          <circle class="fill" cx="32" cy="32" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${offset}"/>
+          <circle fill="none" stroke="#E8F7EF" stroke-width="6" cx="32" cy="32" r="${R}"/>
+          <circle fill="none" stroke="#0B6E4F" stroke-width="6" stroke-linecap="round"
+            cx="32" cy="32" r="${R}"
+            stroke-dasharray="${C}" stroke-dashoffset="${offset}"
+            style="transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .5s"/>
         </svg>
         <div class="ring-label">${pct}%</div>
       </div>
-      <div class="info">
+      <div class="info" style="flex:1;">
         <div class="titulo-row">
           <span class="titulo">Direcionamento ${d.numero}</span>
           <span class="badge-status ${d.status}">${d.status==='atual'?'<span class="pulse"></span>Em andamento':'Encerrado'}</span>
@@ -59,159 +69,59 @@ function renderDirecList(){
       <div class="stats-mini">
         <span class="aprov">${aprov!==null?`<b>${aprov}%</b> de acerto`:'sem dados'}</span>
       </div>
-      <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    `;
-    div.onclick = ()=> openDirecionamento(d.id);
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="opacity:.4;flex-shrink:0;">
+        <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    div.onclick = () => window.location.href = `/aluno/blocos.html?id=${d.id}`;
     list.appendChild(div);
   });
 }
 
-function openDirecionamento(id){
-  direcAtivoId = id;
-  document.querySelectorAll('#navAluno button').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('#mainAluno > section').forEach(s=>s.style.display='none');
-  document.getElementById('tab-blocos').style.display='block';
-  renderBlocos();
-}
+// ===================== DIA DE ESTUDOS =====================
+let diaEtapa = 1;
 
-document.getElementById('voltarDirecBtn').onclick = ()=>{
-  document.getElementById('tab-blocos').style.display='none';
-  document.getElementById('tab-direcionamentos').style.display='block';
-  document.querySelector('#navAluno button[data-tab="direcionamentos"]').classList.add('active');
+document.getElementById('iniciarDiaBtn').onclick = () => {
+  diaEtapa = 1; renderDiaModal();
+  document.getElementById('diaModalOverlay').style.display = 'flex';
+};
+document.getElementById('diaModalFechar').onclick = () => {
+  document.getElementById('diaModalOverlay').style.display = 'none';
 };
 
-// ===================== BLOCOS =====================
-function renderBlocos(){
-  const direc = direcionamentos.find(d=>d.id===direcAtivoId);
-  if(!direc) return;
-  document.getElementById('blocosPeriodoTitulo').textContent = 'Direcionamento '+direc.numero+' · '+(direc.periodo||'');
-  document.getElementById('contadorBlocos').textContent =
-    `${(direc.blocos||[]).length} blocos · meta de ${direc.meta_blocos||0} na semana`;
-  const pct = pctOf(direc);
-  document.getElementById('progressoBar').style.width = pct+'%';
-  document.getElementById('progressoPctTxt').textContent = pct+'%';
+function renderDiaModal(){
+  const direc = direcionamentos.find(d=>d.status==='atual');
+  document.getElementById('diaStep2').className = 'dia-step'+(diaEtapa<2?' locked':'');
+  document.getElementById('diaCheck1').className = 'dia-step-num'+(diaEtapa>1?' done':'');
+  document.getElementById('diaCheck2').className = 'dia-step-num'+(diaEtapa>2?' done':'');
 
-  const list = document.getElementById('blocoList');
-  list.innerHTML = '';
-  if(!(direc.blocos||[]).length){
-    list.innerHTML = `<div class="empty"><span class="display">Nenhum bloco ainda</span>Seu mentor ainda não importou os blocos desta semana.</div>`;
-    return;
+  const body1 = document.getElementById('diaBody1');
+  if(!direc){
+    body1.innerHTML = '<div class="empty-step">Nenhum direcionamento ativo.</div>';
+  } else {
+    const comPrints = (direc.blocos||[]).filter(b=>b.prints_count>0);
+    body1.innerHTML = (comPrints.length===0
+      ? '<div class="empty-step">Nenhum print novo para revisar.</div>'
+      : comPrints.map(b=>`<div class="dia-print-mini"><div class="print-thumb">📄</div><div><div class="tag">${b.disciplina}</div><div class="disc">${b.prints_count} print${b.prints_count>1?'s':''}</div></div></div>`).join('')
+    )+'<button class="btn small" id="diaAvancar1" style="margin-top:12px;">Marcar revisão como concluída</button>';
+    document.getElementById('diaAvancar1').onclick = ()=>{ diaEtapa=2; renderDiaModal(); };
   }
-  direc.blocos.forEach(b=>{
-    const statusKey = b.etapa===4?'feito':b.etapa>0?'andamento':b.pre_agendado?'planejado':'pendente';
-    const expanded = blocosExpandidos.has(b.id);
-    const div = document.createElement('div');
-    div.className='bloco'+(expanded?' expanded':'');
-    div.innerHTML = `
-      <div class="bloco-header" data-toggle="${b.id}">
-        <div class="bloco-codigo">Bloco ${b.codigo}</div>
-        <div class="bloco-info">
-          <div class="nome">${b.disciplina}</div>
-          <div class="meta">${b.etapa===4?`${b.acertos||0}/10 acertos`:'10 questões · ~30min'}${b.prints_count?` · ${b.prints_count} print${b.prints_count>1?'s':''}`  :''}</div>
-        </div>
-        ${b.acertos!==null&&b.etapa===4?`<div class="acertos-circle">${b.acertos}<span class="den">/10</span></div>`:''}
-        <div class="bloco-status ${statusKey}">${statusLabel(statusKey)}</div>
-        <svg class="bloco-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-      ${expanded?renderEtapas(b,direcAtivoId):''}
-    `;
-    list.appendChild(div);
-  });
+
+  const body2 = document.getElementById('diaBody2');
+  if(diaEtapa<2){ body2.innerHTML=''; return; }
+  if(!direc){ body2.innerHTML='<div class="empty-step">Nenhum direcionamento ativo.</div>'; return; }
+  const pre = (direc.blocos||[]).filter(b=>b.pre_agendado&&b.etapa===0);
+  body2.innerHTML = pre.length===0
+    ? '<div class="empty-step">Nenhum bloco pré-agendado.</div>'
+    : pre.map(b=>`<div class="dia-bloco-mini"><span class="l"><span class="cod">${b.codigo}</span>${b.disciplina}</span><a class="btn small" href="/aluno/blocos.html?id=${direc.id}&bloco=${b.id}">Iniciar bloco</a></div>`).join('');
 }
 
-function nodeClass(passo,etapaAtual){
-  if(etapaAtual>=passo) return 'done';
-  if(etapaAtual===passo-1) return 'active';
-  return '';
-}
-
-function renderEtapas(b){
-  const e=b.etapa;
-  const check=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  const trophy=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M7 4h10v3a5 5 0 01-10 0V4z" stroke="currentColor" stroke-width="1.8"/><path d="M7 5H4a3 3 0 003 3M17 5h3a3 3 0 01-3 3" stroke="currentColor" stroke-width="1.8"/><path d="M12 12v4M9 20h6M10 16h4v4h-4v-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
-  let action='';
-  if(e===0){
-    action=`<div class="step-action center-btn"><button class="btn" data-action="iniciar" data-codigo="${b.id}">Iniciar bloco</button></div>`;
-  }else if(e===1){
-    const boxes=Array.from({length:11},(_,i)=>i).map(n=>`<div class="acertos-box" data-action="salvar-acertos" data-codigo="${b.id}" data-val="${n}">${n}</div>`).join('');
-    action=`<div class="step-action"><div class="ask">Quantas das 10 questões você acertou?</div><div class="acertos-grid">${boxes}</div></div>`;
-  }else if(e===2){
-    action=`<div class="step-action">
-      <div class="dropzone" data-action="abrir-prints" data-codigo="${b.id}">
-        <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M7 9l5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <div class="dz-title">Arraste os prints aqui ou clique para selecionar</div>
-        <div class="dz-sub">Já ficam marcados como ${b.disciplina}</div>
-      </div>
-      <input type="file" id="fileInput-${b.id}" multiple accept="image/*" style="display:none">
-    </div>`;
-  }else if(e===3){
-    action=`<div class="step-action center-btn"><button class="trophy-btn" data-action="finalizar" data-codigo="${b.id}">${trophy} Finalizar bloco</button></div>`;
-  }else{
-    action=`<div class="step-action"><div class="concluido-msg">${trophy} Bloco concluído</div></div>`;
-  }
-  return `<div class="etapas">
-    <div class="stepper">
-      <div class="step-node ${nodeClass(1,e)}"><div class="step-circle">${e>=1?check:'1'}</div><div class="step-label">Iniciar bloco</div></div>
-      <div class="step-node ${nodeClass(2,e)}"><div class="step-circle">${e>=2?check:'2'}</div><div class="step-label">Percentual de acertos</div></div>
-      <div class="step-node ${nodeClass(3,e)}"><div class="step-circle">${e>=3?check:'3'}</div><div class="step-label">Adicionar prints</div></div>
-      <div class="step-node trophy ${nodeClass(4,e)}"><div class="step-circle">${e>=4?check:trophy}</div><div class="step-label">Finalizar</div></div>
-    </div>
-    ${action}
-  </div>`;
-}
-
-async function atualizarBloco(blocoId, campos){
-  await _supabase.from('blocos').update(campos).eq('id', blocoId);
-  // atualiza local
-  const direc = direcionamentos.find(d=>d.id===direcAtivoId);
-  const bloco = direc.blocos.find(b=>b.id===blocoId);
-  Object.assign(bloco, campos);
-  renderBlocos();
-  renderPerfil();
-}
-
-document.getElementById('blocoList').addEventListener('click', async (e)=>{
-  const toggle = e.target.closest('[data-toggle]');
-  const btn = e.target.closest('[data-action]');
-  if(btn){
-    const id=btn.dataset.codigo, action=btn.dataset.action;
-    const direc=direcionamentos.find(d=>d.id===direcAtivoId);
-    const bloco=direc.blocos.find(b=>b.id===id);
-    if(action==='iniciar'){ window.open(bloco.link,'_blank'); await atualizarBloco(id,{etapa:1}); }
-    if(action==='salvar-acertos'){ await atualizarBloco(id,{acertos:parseInt(btn.dataset.val),etapa:2}); }
-    if(action==='abrir-prints'){ document.getElementById('fileInput-'+id).click(); }
-    if(action==='finalizar'){ await atualizarBloco(id,{etapa:4}); }
-    return;
-  }
-  if(toggle){
-    const key=toggle.dataset.toggle;
-    if(blocosExpandidos.has(key)) blocosExpandidos.delete(key);
-    else blocosExpandidos.add(key);
-    renderBlocos();
-  }
-});
-
-document.getElementById('blocoList').addEventListener('change', (e)=>{
-  if(e.target.matches('input[type=file]')){
-    const id=e.target.id.replace('fileInput-','');
-    if(e.target.files.length) abrirModalPrints(id, Array.from(e.target.files));
-  }
-});
-document.getElementById('blocoList').addEventListener('dragover',(e)=>{ const dz=e.target.closest('.dropzone'); if(dz){e.preventDefault();dz.classList.add('dragover');} });
-document.getElementById('blocoList').addEventListener('dragleave',(e)=>{ const dz=e.target.closest('.dropzone'); if(dz) dz.classList.remove('dragover'); });
-document.getElementById('blocoList').addEventListener('drop',(e)=>{
-  const dz=e.target.closest('.dropzone');
-  if(dz){ e.preventDefault(); dz.classList.remove('dragover');
-    const id=dz.dataset.codigo;
-    if(e.dataTransfer.files.length) abrirModalPrints(id,Array.from(e.dataTransfer.files));
-  }
-});
-
+// ===================== INIT =====================
 async function init(){
-  const ok = await carregarSessao("aluno"); if(!ok) return;
-  document.getElementById("userEmailLabel").textContent = usuarioAtual.email;
+  const ok = await carregarSessao('aluno');
+  if(!ok) return;
+  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
   await carregarDirecionamentos();
   esconderLoading();
-  document.getElementById("appShell").style.display="block";
+  document.getElementById('appShell').style.display = 'block';
 }
 init();

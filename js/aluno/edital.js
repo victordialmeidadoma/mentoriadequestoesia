@@ -56,7 +56,6 @@ async function renderEditalAluno(){
   document.getElementById('editalSubtitulo').textContent=editais.length+' edital'+(editais.length>1?'is':'')+' vinculado'+(editais.length>1?'s':'');
 }
 
-document.querySelector('#navAluno button[data-tab="edital"]').addEventListener('click', carregarEdital);
 
 async function init(){
   const ok = await carregarSessao("aluno"); if(!ok) return;

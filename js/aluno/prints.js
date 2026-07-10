@@ -207,7 +207,6 @@ document.getElementById('uploadPrintsConfirmar').onclick=async ()=>{
   await carregarPrints();
 };
 
-document.querySelector('#navAluno button[data-tab="prints"]').addEventListener('click', carregarPrints);
 
 async function init(){
   const ok = await carregarSessao("aluno"); if(!ok) return;

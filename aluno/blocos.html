@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentoria — Blocos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/aluno.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="loading-screen" id="loadingScreen"><div class="loading-logo">M</div><div class="loading-spinner"></div></div>
+<div id="appShell" style="display:none;">
+<div class="topbar">
+  <div class="brand">
+    <div class="seal">M</div>
+    <div class="brand-text"><div class="t1">Mentoria</div><div class="t2">Área do aluno</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;color:var(--text-soft);" id="userEmailLabel">—</span>
+    <button class="btn ghost small" onclick="logout()">Sair</button>
+  </div>
+</div>
+<div class="shell">
+  <nav class="nav">
+    <div class="nav-group-label">Estudo</div>
+    <a href="/aluno/perfil.html"><span class="dot"></span>Perfil</a>
+    <a href="/aluno/direcionamentos.html" class="active"><span class="dot"></span>Direcionamentos</a>
+    <div class="nav-group-label">Revisão</div>
+    <a href="/aluno/prints.html"><span class="dot"></span>Prints</a>
+    <a href="#"><span class="dot"></span>Flashcards<span class="soon">em breve</span></a>
+    <a href="#"><span class="dot"></span>Materiais<span class="soon">em breve</span></a>
+    <a href="/aluno/edital.html"><span class="dot"></span>Edital</a>
+  </nav>
+  <main>
+    <button class="btn ghost small" onclick="window.location.href='/aluno/direcionamentos.html'" style="margin-bottom:16px;">← Voltar para direcionamentos</button>
+    <h1 class="page-title" id="blocosTitulo">Blocos</h1>
+    <p class="page-sub" id="blocosSubtitulo">10 questões por bloco · ~30min médio</p>
+
+    <div class="card" style="margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-soft);margin-bottom:4px;">
+        <span>Progresso deste direcionamento</span>
+        <span id="progressoPctTxt" style="font-family:'Outfit';font-weight:700;color:var(--g1);">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressoBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="section-head">
+      <h2>Blocos</h2>
+      <span class="hint" id="contadorBlocos"></span>
+    </div>
+    <div class="bloco-list" id="blocoList"></div>
+
+    <!-- Modal prints dentro do bloco -->
+    <div class="modal-overlay" id="printsModalOverlay" style="display:none;">
+      <div class="modal modal-lg">
+        <h3 class="display">Adicionar prints</h3>
+        <p id="printsModalCount">—</p>
+        <div id="printsModalBody" style="margin-bottom:18px;"></div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="printsModalCancelar">Cancelar</button>
+          <button class="btn" id="printsModalConfirmar">Adicionar</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/aluno/blocos.js"></script>
+</body>
+</html>

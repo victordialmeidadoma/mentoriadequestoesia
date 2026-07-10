@@ -14,8 +14,6 @@ let printIdCounter = 1;
 let printsViewAtual = 'meus';
 let printsFiltroMateria = 'todas';
 let uploadPrintsArquivos = [];
-let usuarioAtual = null;
-let perfilAtual = null;
 
 // ===================== EDITAL (parse CSV — mantido) =====================
 function parseLinhaCSV(linha, delim){

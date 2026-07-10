@@ -1,10 +1,9 @@
 {
   "rewrites": [
-    { "source": "/",            "destination": "/login.html" },
-    { "source": "/login",       "destination": "/login.html" },
+    { "source": "/login",        "destination": "/login.html" },
     { "source": "/definir-senha","destination": "/definir-senha.html" },
-    { "source": "/aluno",       "destination": "/aluno/perfil.html" },
-    { "source": "/admin",       "destination": "/admin/alunos.html" }
+    { "source": "/aluno",        "destination": "/aluno/perfil.html" },
+    { "source": "/admin",        "destination": "/admin/alunos.html" }
   ],
   "headers": [
     {

@@ -101,7 +101,21 @@ function renderDetalheBlocoList(){
 
 document.getElementById('fecharDetalheBtn').onclick=()=>document.getElementById('detalheAlunoMentor').style.display='none';
 
-// Importar CSV de blocos
+// Modal importar blocos
+document.getElementById('abrirImportarBlocos').onclick=()=>{
+  document.getElementById('csvInput').value='';
+  document.getElementById('importarBlocosModal').style.display='flex';
+};
+document.getElementById('cancelarImportarBlocos').onclick=()=>document.getElementById('importarBlocosModal').style.display='none';
+
+document.getElementById('csvFileBtn').onclick=()=>document.getElementById('csvFileInput').click();
+document.getElementById('csvFileInput').onchange=(e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=(ev)=>{ document.getElementById('csvInput').value=ev.target.result; };
+  r.readAsText(file,'utf-8');
+};
+
 document.getElementById('importarBtn').onclick = async () => {
   const raw=document.getElementById('csvInput').value.trim();
   if(!raw||mentorAlunoIdx===null) return;
@@ -112,11 +126,14 @@ document.getElementById('importarBtn').onclick = async () => {
   const inserts=linhas.map(l=>{
     const [codigo,disciplina,link]=l.split(',');
     if(!codigo||!disciplina) return null;
-    return {direcionamento_id:dir.id,aluno_id:a.id,codigo:codigo.trim(),disciplina:disciplina.trim(),link:(link||'').trim(),etapa:0};
+    return {direcionamento_id:dir.id,aluno_id:a.id,codigo:codigo.trim(),disciplina:disciplina.trim(),link:(link||''  ).trim(),etapa:0};
   }).filter(Boolean);
   if(!inserts.length) return;
+  const btn=document.getElementById('importarBtn');
+  btn.textContent='Importando...'; btn.disabled=true;
   await _supabase.from('blocos').insert(inserts);
-  document.getElementById('csvInput').value='';
+  btn.textContent='Importar blocos'; btn.disabled=false;
+  document.getElementById('importarBlocosModal').style.display='none';
   await carregarAlunos();
   showDetalheAluno(mentorAlunoIdx);
 };

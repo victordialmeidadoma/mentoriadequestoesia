@@ -1,0 +1,42 @@
+/* Direcionamento cards (admin) */
+.direc-card{display:flex;align-items:center;gap:20px;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:20px 24px;margin-bottom:14px;transition:.18s ease;}
+.direc-card.clicavel{cursor:pointer;}
+.direc-card.clicavel:hover{border-color:var(--g2);box-shadow:0 8px 24px rgba(11,110,79,.10);}
+.ring{flex-shrink:0;position:relative;width:64px;height:64px;}
+.ring svg{transform:rotate(-90deg);}
+.ring .track{fill:none;stroke:var(--g-soft);stroke-width:6;}
+.ring .fill{fill:none;stroke:url(#ringGrad);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .5s ease;}
+.ring .ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Outfit';font-weight:800;font-size:14px;color:var(--g1);}
+.direc-card .info .titulo{font-weight:400;font-size:13.5px;color:var(--text-soft);font-family:'Outfit';}
+.direc-card .info .carreira{font-size:18px;font-weight:600;color:var(--ink);font-family:'Outfit';margin-top:3px;text-transform:uppercase;}
+.direc-card .info .sub{font-size:12px;color:var(--text-soft);margin-top:6px;}
+.badge-status{font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;display:inline-flex;align-items:center;gap:5px;}
+.badge-status.atual{background:var(--g-soft);color:var(--g1);}
+.badge-status.encerrado{background:#F0F1EF;color:var(--text-soft);}
+.badge-status .pulse{width:6px;height:6px;border-radius:50%;background:var(--g1);}
+
+/* Blocos (admin) */
+.bloco-list{display:flex;flex-direction:column;gap:11px;}
+.bloco{background:var(--white);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+.bloco-header{display:flex;align-items:center;gap:16px;padding:15px 18px;}
+.bloco-codigo{font-family:'Outfit';font-weight:700;font-size:11.5px;color:var(--g1);background:var(--g-soft);border-radius:8px;padding:6px 10px;flex-shrink:0;}
+.bloco-info .nome{font-weight:700;font-size:15px;color:var(--ink);font-family:'Outfit';}
+.bloco-info .meta{font-size:12px;color:var(--text-soft);margin-top:2px;}
+.bloco-status{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:5px 11px;border-radius:20px;flex-shrink:0;}
+.bloco-status.pendente{background:#F0F1EF;color:var(--text-soft);}
+.bloco-status.planejado{background:#FBF1E3;color:var(--amber);}
+.bloco-status.feito{background:var(--g-soft);color:var(--g1);}
+.acertos-circle{flex-shrink:0;width:42px;height:42px;border-radius:50%;background:var(--g-soft);color:var(--g1);display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:'Outfit';font-weight:800;font-size:12px;line-height:1;border:2px solid var(--g1);}
+.acertos-circle .den{font-size:8px;font-weight:600;opacity:.7;}
+
+/* Edital admin */
+.edital-card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:14px;}
+.edital-card .et-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;}
+.edital-card .et-concurso{font-family:'Outfit';font-weight:700;font-size:16px;color:var(--ink);}
+.edital-card .et-meta{font-size:12.5px;color:var(--text-soft);margin-top:4px;}
+.edital-card .et-meta span{margin-right:12px;}
+.edital-card .et-vinculos{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;}
+.vinculo-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;font-size:13px;}
+.vinculo-row .v-nome{font-weight:600;color:var(--ink);}
+.vinculo-row .v-cobertura{font-size:11.5px;color:var(--text-soft);margin-left:8px;}
+.empty-step{font-size:13px;color:var(--text-soft);padding:6px 0;}

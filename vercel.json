@@ -1,16 +1,17 @@
 {
   "rewrites": [
-    { "source": "/aluno",  "destination": "/aluno.html" },
-    { "source": "/admin",  "destination": "/admin.html" },
-    { "source": "/",       "destination": "/aluno.html" }
+    { "source": "/",            "destination": "/login.html" },
+    { "source": "/login",       "destination": "/login.html" },
+    { "source": "/definir-senha","destination": "/definir-senha.html" },
+    { "source": "/aluno",       "destination": "/aluno/perfil.html" },
+    { "source": "/admin",       "destination": "/admin/alunos.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Frame-Options",        "value": "DENY" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" }
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     }
   ]

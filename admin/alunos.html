@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentoria — Alunos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/admin.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="loading-screen" id="loadingScreen"><div class="loading-logo">M</div><div class="loading-spinner"></div></div>
+<div id="appShell" style="display:none;">
+<div class="topbar">
+  <div class="brand"><div class="seal">M</div><div class="brand-text"><div class="t1">Mentoria</div><div class="t2">Painel do mentor</div></div></div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;color:var(--text-soft);" id="userEmailLabel">—</span>
+    <button class="btn ghost small" onclick="logout()">Sair</button>
+  </div>
+</div>
+<div class="shell">
+  <nav class="nav">
+    <div class="nav-group-label">Gestão</div>
+    <a href="/admin/alunos.html" class="active"><span class="dot"></span>Alunos</a>
+    <a href="/admin/direcionamentos.html" class=""><span class="dot"></span>Direcionamentos</a>
+    <a href="/admin/edital.html" class=""><span class="dot"></span>Edital</a>
+  </nav>
+  <main>
+
+    <h1 class="page-title">Painel do mentor</h1>
+    <p class="page-sub">Visão geral dos alunos ativos</p>
+    <div class="grid grid-3" style="margin-bottom:30px;">
+      <div class="card stat-card"><div class="label">Alunos ativos</div><div class="value" id="mTotalAlunos">—</div></div>
+      <div class="card stat-card"><div class="label">Blocos feitos (semana)</div><div class="value" id="mTotalBlocos">—</div></div>
+      <div class="card stat-card"><div class="label">Aproveitamento geral</div><div class="value" id="mAprovGeral">—</div></div>
+    </div>
+    <div class="section-head"><h2>Alunos</h2><button class="btn small" id="cadastrarAlunoBtn">Cadastrar aluno</button></div>
+    <div id="alunoListMentor"></div>
+    <div id="detalheAlunoMentor" style="display:none;margin-top:30px;">
+      <div class="section-head"><h2 id="detalheNome">—</h2><button class="btn ghost small" id="fecharDetalheBtn">Fechar</button></div>
+      <div class="grid grid-3" style="margin-bottom:18px;">
+        <div class="card stat-card"><div class="label">Progresso</div><div class="value" id="dPct">—</div></div>
+        <div class="card stat-card"><div class="label">Blocos feitos</div><div class="value" id="dBlocosFeitos">—</div></div>
+        <div class="card stat-card"><div class="label">Aproveitamento</div><div class="value" id="dAproveitamento">—</div></div>
+      </div>
+      <div class="section-head"><h2>Importar blocos (CSV)</h2><span class="hint">código,disciplina,link</span></div>
+      <div class="upload-box">
+        Cole as linhas do CSV (código,disciplina,link)
+        <textarea class="csv-input" id="csvInput" placeholder="01A,Direito Penal,https://..."></textarea>
+        <div style="margin-top:10px;"><button class="btn" id="importarBtn">Importar blocos</button></div>
+      </div>
+      <div class="card" style="margin-top:18px;">
+        <div style="font-size:13px;color:var(--text-soft);margin-bottom:8px;">Blocos da semana</div>
+        <div class="bloco-list" id="detalheBlocoList"></div>
+      </div>
+    </div>
+    <!-- Modal cadastrar aluno -->
+    <div class="modal-overlay" id="cadastrarAlunoModalOverlay" style="display:none;">
+      <div class="modal">
+        <h3 class="display">Cadastrar aluno</h3>
+        <p>O aluno receberá um e-mail para definir a senha de acesso.</p>
+        <label>Nome completo</label><input type="text" id="novoAlunoNome" placeholder="João Silva">
+        <label>E-mail</label><input type="email" id="novoAlunoEmail" placeholder="aluno@email.com">
+        <label>Foco / carreiras</label><input type="text" id="novoAlunoFoco" placeholder="Autoridade e Controle">
+        <div class="login-error" id="cadastroAlunoErro" style="display:none;"></div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="cadastrarAlunoCancelar">Cancelar</button>
+          <button class="btn" id="cadastrarAlunoConfirmar">Cadastrar</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/admin/alunos.js"></script>
+</body>
+</html>

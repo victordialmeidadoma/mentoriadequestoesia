@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentoria — Direcionamentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display.swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/aluno.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">M</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<div id="appShell" style="display:none;">
+<div class="topbar">
+  <div class="brand">
+    <div class="seal">M</div>
+    <div class="brand-text">
+      <div class="t1">Mentoria</div>
+      <div class="t2">Área do aluno</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;color:var(--text-soft);" id="userEmailLabel">—</span>
+    <button class="btn ghost small" onclick="logout()">Sair</button>
+  </div>
+</div>
+<div class="shell">
+  <nav class="nav">
+    <div class="nav-group-label">Estudo</div>
+    <a href="/aluno/perfil.html" class=""><span class="dot"></span>Perfil</a>
+    <a href="/aluno/direcionamentos.html" class="active"><span class="dot"></span>Direcionamentos</a>
+    <div class="nav-group-label">Revisão</div>
+    <a href="/aluno/prints.html" class=""><span class="dot"></span>Prints</a>
+    <a href="#" class=""><span class="dot"></span>Flashcards<span class="soon">em breve</span></a>
+    <a href="#" class=""><span class="dot"></span>Materiais<span class="soon">em breve</span></a>
+    <a href="/aluno/edital.html" class=""><span class="dot"></span>Edital</a>
+  </nav>
+  <main>
+
+    <svg width="0" height="0" style="position:absolute;"><defs><linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0B6E4F"/><stop offset="100%" stop-color="#15B981"/></linearGradient></defs></svg>
+    <div class="direc-hero">
+      <div class="direc-hero-top">
+        <div><div class="eyebrow">Visão geral</div><h1>Seus direcionamentos</h1></div>
+        <button class="btn" id="iniciarDiaBtn" style="background:#fff;color:var(--g1);">Iniciar dia de estudos</button>
+      </div>
+      <div class="direc-hero-metrics">
+        <div class="m"><div class="n" id="heroSemanas">—</div><div class="l">Semanas de mentoria</div></div>
+        <div class="m"><div class="n" id="heroBlocos">—</div><div class="l">Blocos concluídos</div></div>
+        <div class="m"><div class="n" id="heroAprov">—</div><div class="l">Aproveitamento médio</div></div>
+      </div>
+    </div>
+    <div class="timeline" id="direcList"></div>
+    <!-- Modal dia de estudos -->
+    <div class="modal-overlay" id="diaModalOverlay" style="display:none;">
+      <div class="modal">
+        <h3 class="display">Dia de estudos</h3>
+        <p>Siga as etapas na ordem.</p>
+        <div class="dia-step" id="diaStep1"><div class="dia-step-head"><div class="dia-step-num" id="diaCheck1">1</div><div class="dia-step-title">Revisar prints</div></div><div class="dia-step-body" id="diaBody1"></div></div>
+        <div class="dia-step" id="diaStep2"><div class="dia-step-head"><div class="dia-step-num" id="diaCheck2">2</div><div class="dia-step-title">Iniciar blocos pré-agendados</div></div><div class="dia-step-body" id="diaBody2"></div></div>
+        <div class="modal-actions"><button class="btn ghost" id="diaModalFechar">Fechar</button></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/aluno/direcionamentos.js"></script>
+</body>
+</html>

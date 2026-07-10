@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentoria — Entrar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">M</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Verificando sessão...</div>
+</div>
+
+<div class="login-wrap" id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <div class="seal" style="margin:0 auto 18px;">M</div>
+    <h1 class="display login-title">Entrar na mentoria</h1>
+    <p class="login-sub">Acesse com o e-mail cadastrado pelo seu mentor</p>
+    <label>E-mail</label>
+    <input type="email" id="loginEmail" placeholder="voce@email.com" autocomplete="email">
+    <label>Senha</label>
+    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    <div class="login-error" id="loginError" style="display:none;"></div>
+    <button class="btn" id="loginBtn" style="width:100%;justify-content:center;margin-top:6px;">Entrar</button>
+    <p class="login-footnote">Acesso protegido por Supabase Auth.</p>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+// Se já tem sessão válida, redireciona
+_supabase.auth.getSession().then(async ({ data: { session } }) => {
+  if (!session) { esconderLoading(); document.getElementById('loginScreen').style.display = 'flex'; return; }
+  const { data: perfil } = await _supabase.from('perfis').select('role').eq('id', session.user.id).single();
+  if (perfil?.role === 'mentor') window.location.href = '/admin/alunos.html';
+  else window.location.href = '/aluno/perfil.html';
+});
+
+// Detecta token de recovery (link do e-mail)
+_supabase.auth.onAuthStateChange((event) => {
+  if (event === 'PASSWORD_RECOVERY') window.location.href = '/definir-senha.html';
+});
+
+document.getElementById('loginBtn').onclick = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginPassword').value.trim();
+  const erro = document.getElementById('loginError');
+  erro.style.display = 'none';
+  if (!email || !senha) { erro.textContent = 'Preencha e-mail e senha.'; erro.style.display = 'block'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = 'Entrando...'; btn.disabled = true;
+  const { data, error } = await _supabase.auth.signInWithPassword({ email, password: senha });
+  btn.textContent = 'Entrar'; btn.disabled = false;
+  if (error) { erro.textContent = error.message; erro.style.display = 'block'; return; }
+  const { data: perfil } = await _supabase.from('perfis').select('role').eq('id', data.user.id).single();
+  if (perfil?.role === 'mentor') window.location.href = '/admin/alunos.html';
+  else window.location.href = '/aluno/perfil.html';
+};
+</script>
+</body>
+</html>

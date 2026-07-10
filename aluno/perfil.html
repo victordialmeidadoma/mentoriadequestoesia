@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentoria — Perfil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display.swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/aluno.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">M</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<div id="appShell" style="display:none;">
+<div class="topbar">
+  <div class="brand">
+    <div class="seal">M</div>
+    <div class="brand-text">
+      <div class="t1">Mentoria</div>
+      <div class="t2">Área do aluno</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;color:var(--text-soft);" id="userEmailLabel">—</span>
+    <button class="btn ghost small" onclick="logout()">Sair</button>
+  </div>
+</div>
+<div class="shell">
+  <nav class="nav">
+    <div class="nav-group-label">Estudo</div>
+    <a href="/aluno/perfil.html" class="active"><span class="dot"></span>Perfil</a>
+    <a href="/aluno/direcionamentos.html" class=""><span class="dot"></span>Direcionamentos</a>
+    <div class="nav-group-label">Revisão</div>
+    <a href="/aluno/prints.html" class=""><span class="dot"></span>Prints</a>
+    <a href="#" class=""><span class="dot"></span>Flashcards<span class="soon">em breve</span></a>
+    <a href="#" class=""><span class="dot"></span>Materiais<span class="soon">em breve</span></a>
+    <a href="/aluno/edital.html" class=""><span class="dot"></span>Edital</a>
+  </nav>
+  <main>
+
+    <div class="profile-hero">
+      <div class="avatar" id="perfilAvatar">—</div>
+      <div>
+        <div class="nome" id="perfilNome">—</div>
+        <div class="foco" id="perfilFoco"></div>
+      </div>
+    </div>
+    <div class="grid grid-3" style="margin-bottom:24px;">
+      <div class="card stat-card"><div class="label">Direcionamento atual</div><div class="value" id="pPct">—</div></div>
+      <div class="card stat-card"><div class="label">Blocos concluídos</div><div class="value" id="pTotalBlocos">—</div></div>
+      <div class="card stat-card"><div class="label">Aproveitamento médio</div><div class="value" id="pAprov">—</div></div>
+    </div>
+    <div class="section-head"><h2>Informações</h2></div>
+    <div class="card">
+      <div class="info-row"><span class="k">Nome</span><span class="v" id="infoNome">—</span></div>
+      <div class="info-row"><span class="k">Concursos em foco</span><span class="v" id="infoCarreiras">—</span></div>
+      <div class="info-row"><span class="k">Início da mentoria</span><span class="v" id="infoInicio">—</span></div>
+    </div>
+  </main>
+</div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/aluno/perfil.js"></script>
+</body>
+</html>

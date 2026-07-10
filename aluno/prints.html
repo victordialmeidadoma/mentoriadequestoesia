@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentoria — Prints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display.swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/aluno.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">M</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<div id="appShell" style="display:none;">
+<div class="topbar">
+  <div class="brand">
+    <div class="seal">M</div>
+    <div class="brand-text">
+      <div class="t1">Mentoria</div>
+      <div class="t2">Área do aluno</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:13px;color:var(--text-soft);" id="userEmailLabel">—</span>
+    <button class="btn ghost small" onclick="logout()">Sair</button>
+  </div>
+</div>
+<div class="shell">
+  <nav class="nav">
+    <div class="nav-group-label">Estudo</div>
+    <a href="/aluno/perfil.html" class=""><span class="dot"></span>Perfil</a>
+    <a href="/aluno/direcionamentos.html" class=""><span class="dot"></span>Direcionamentos</a>
+    <div class="nav-group-label">Revisão</div>
+    <a href="/aluno/prints.html" class="active"><span class="dot"></span>Prints</a>
+    <a href="#" class=""><span class="dot"></span>Flashcards<span class="soon">em breve</span></a>
+    <a href="#" class=""><span class="dot"></span>Materiais<span class="soon">em breve</span></a>
+    <a href="/aluno/edital.html" class=""><span class="dot"></span>Edital</a>
+  </nav>
+  <main>
+
+    <h1 class="page-title">Prints de revisão</h1>
+    <p class="page-sub">Tudo que você marcou como importante durante a leitura da resolução</p>
+    <div class="prints-toolbar">
+      <div class="prints-subnav">
+        <button class="active" data-pview="meus">Meus prints</button>
+        <button data-pview="feed">Feed da turma</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <select id="printsOrdem" class="prints-select">
+          <option value="recentes">Mais recentes primeiro</option>
+          <option value="antigos">Mais antigos primeiro</option>
+        </select>
+        <button class="btn small" id="abrirUploadPrintsBtn">+ Adicionar prints</button>
+      </div>
+    </div>
+    <div class="prints-chips" id="printsChips"></div>
+    <div id="printsView"></div>
+    <!-- Lightbox -->
+    <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;flex-direction:column;align-items:center;justify-content:center;">
+      <button id="lbClose" style="position:absolute;top:18px;right:22px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;">×</button>
+      <button id="lbPrev" style="position:absolute;left:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:44px;height:44px;border-radius:50%;cursor:pointer;">‹</button>
+      <button id="lbNext" style="position:absolute;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:44px;height:44px;border-radius:50%;cursor:pointer;">›</button>
+      <img id="lbImg" src="" alt="" style="max-width:88vw;max-height:80vh;object-fit:contain;border-radius:8px;">
+      <div style="margin-top:14px;text-align:center;">
+        <div id="lbMateria" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.5);margin-bottom:4px;"></div>
+        <div id="lbTag" style="font-size:15px;color:#fff;font-weight:600;max-width:560px;"></div>
+        <div id="lbCounter" style="font-size:12px;color:rgba(255,255,255,.4);margin-top:6px;"></div>
+      </div>
+    </div>
+    <!-- Modal upload prints -->
+    <div class="modal-overlay" id="uploadPrintsModalOverlay" style="display:none;">
+      <div class="modal modal-lg">
+        <h3 class="display">Adicionar prints</h3>
+        <p>Selecione a matéria e uma tag pra cada print.</p>
+        <div class="dropzone" id="uploadPrintsDropzone">
+          <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M7 9l5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="dz-title">Arraste os prints aqui ou clique para selecionar</div>
+          <div class="dz-sub">Várias imagens de uma vez</div>
+        </div>
+        <input type="file" id="uploadPrintsFileInput" multiple accept="image/*" style="display:none">
+        <div id="uploadPrintsBody"></div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="uploadPrintsCancelar">Cancelar</button>
+          <button class="btn" id="uploadPrintsConfirmar" style="display:none;">Adicionar à minha revisão</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/aluno/prints.js"></script>
+</body>
+</html>

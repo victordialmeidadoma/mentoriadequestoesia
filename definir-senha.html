@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentoria — Definir senha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="seal" style="margin:0 auto 18px;">M</div>
+    <h1 class="display login-title">Crie sua senha</h1>
+    <p class="login-sub">Escolha uma senha para acessar a plataforma</p>
+    <label>Nova senha</label>
+    <input type="password" id="novaSenha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+    <label>Confirmar senha</label>
+    <input type="password" id="confirmarSenha" placeholder="Repita a senha" autocomplete="new-password">
+    <div class="login-error" id="senhaErro" style="display:none;"></div>
+    <button class="btn" id="definirBtn" style="width:100%;justify-content:center;margin-top:6px;">Salvar senha e entrar</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+document.getElementById('definirBtn').onclick = async () => {
+  const nova = document.getElementById('novaSenha').value;
+  const confirma = document.getElementById('confirmarSenha').value;
+  const erro = document.getElementById('senhaErro');
+  erro.style.display = 'none';
+  if (nova.length < 6) { erro.textContent = 'A senha precisa ter no mínimo 6 caracteres.'; erro.style.display = 'block'; return; }
+  if (nova !== confirma) { erro.textContent = 'As senhas não conferem.'; erro.style.display = 'block'; return; }
+  const btn = document.getElementById('definirBtn');
+  btn.textContent = 'Salvando...'; btn.disabled = true;
+  const { error } = await _supabase.auth.updateUser({ password: nova });
+  btn.textContent = 'Salvar senha e entrar'; btn.disabled = false;
+  if (error) { erro.textContent = error.message; erro.style.display = 'block'; return; }
+  const { data: { session } } = await _supabase.auth.getSession();
+  const { data: perfil } = await _supabase.from('perfis').select('role').eq('id', session.user.id).single();
+  if (perfil?.role === 'mentor') window.location.href = '/admin/alunos.html';
+  else window.location.href = '/aluno/perfil.html';
+};
+</script>
+</body>
+</html>

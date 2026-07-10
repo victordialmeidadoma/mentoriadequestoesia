@@ -69,6 +69,25 @@
   </main>
 </div>
 </div>
+
+<!-- Modal importar blocos -->
+<div class="modal-overlay" id="importarBlocosModal" style="display:none;">
+  <div class="modal modal-lg">
+    <h3 class="display">Importar blocos</h3>
+    <p>Selecione um arquivo CSV ou cole as linhas abaixo.<br>
+    Formato: <code style="background:var(--bg);padding:2px 6px;border-radius:5px;font-size:12px;">código,disciplina,link</code></p>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn ghost small" id="csvFileBtn">Selecionar arquivo .csv</button>
+      <input type="file" id="csvFileInput" accept=".csv" style="display:none">
+    </div>
+    <textarea class="csv-input" id="csvInput" placeholder="01A,Direito Penal,https://tec.com.br/bloco/3344&#10;01B,Direito Administrativo,https://tec.com.br/bloco/3345"></textarea>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn ghost" id="cancelarImportarBlocos">Cancelar</button>
+      <button class="btn" id="importarBtn">Importar blocos</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/config.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/admin/alunos.js"></script>

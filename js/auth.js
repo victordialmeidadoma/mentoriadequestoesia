@@ -14,47 +14,70 @@ async function logout() {
 }
 
 async function carregarSessao(roleEsperado) {
-  try {
-    const { data: { session }, error: sessErr } = await _supabase.auth.getSession();
-    if (sessErr || !session) {
-      window.location.href = '/login.html';
-      return false;
-    }
+  return new Promise((resolve) => {
+    // Aguarda o Supabase restaurar a sessão via onAuthStateChange
+    // (mais confiável que getSession na navegação entre páginas)
+    let resolvido = false;
 
-    usuarioAtual = session.user;
+    const { data: { subscription } } = _supabase.auth.onAuthStateChange(async (event, session) => {
+      if (resolvido) return;
 
-    // Tenta buscar o perfil — com retry caso o RLS esteja causando delay
-    let perfil = null;
-    for (let tentativa = 0; tentativa < 3; tentativa++) {
-      const { data, error } = await _supabase
-        .from('perfis')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-      if (data) { perfil = data; break; }
-      if (error && error.code !== 'PGRST116') break; // erro que não seja "not found"
-      await new Promise(r => setTimeout(r, 400)); // espera 400ms e tenta de novo
-    }
+      if (event === 'SIGNED_OUT' || !session) {
+        resolvido = true;
+        subscription.unsubscribe();
+        window.location.href = '/login.html';
+        resolve(false);
+        return;
+      }
 
-    if (!perfil) {
-      // Perfil não encontrado — pode ser usuário novo sem perfil ainda
-      window.location.href = '/login.html';
-      return false;
-    }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        resolvido = true;
+        subscription.unsubscribe();
 
-    if (roleEsperado && perfil.role !== roleEsperado) {
-      // Role errado: redireciona para a área certa
-      if (perfil.role === 'mentor') window.location.href = '/admin/alunos.html';
-      else window.location.href = '/aluno/perfil.html';
-      return false;
-    }
+        usuarioAtual = session.user;
 
-    perfilAtual = perfil;
-    return true;
+        const { data: perfil } = await _supabase
+          .from('perfis')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
 
-  } catch (e) {
-    console.error('Erro na sessão:', e);
-    window.location.href = '/login.html';
-    return false;
-  }
+        if (!perfil) {
+          window.location.href = '/login.html';
+          resolve(false);
+          return;
+        }
+
+        if (roleEsperado && perfil.role !== roleEsperado) {
+          const destino = perfil.role === 'mentor' ? '/admin/alunos.html' : '/aluno/perfil.html';
+          window.location.href = destino;
+          resolve(false);
+          return;
+        }
+
+        perfilAtual = perfil;
+        resolve(true);
+      }
+    });
+
+    // Fallback: se onAuthStateChange demorar mais de 5s, tenta getSession
+    setTimeout(async () => {
+      if (resolvido) return;
+      resolvido = true;
+      subscription.unsubscribe();
+
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (!session) { window.location.href = '/login.html'; resolve(false); return; }
+
+      usuarioAtual = session.user;
+      const { data: perfil } = await _supabase.from('perfis').select('*').eq('id', session.user.id).maybeSingle();
+      if (!perfil) { window.location.href = '/login.html'; resolve(false); return; }
+      if (roleEsperado && perfil.role !== roleEsperado) {
+        window.location.href = perfil.role === 'mentor' ? '/admin/alunos.html' : '/aluno/perfil.html';
+        resolve(false); return;
+      }
+      perfilAtual = perfil;
+      resolve(true);
+    }, 5000);
+  });
 }

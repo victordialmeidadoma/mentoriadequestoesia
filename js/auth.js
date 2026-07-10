@@ -1,4 +1,4 @@
-// auth.js — sessão e autenticação compartilhada
+// auth.js — sessão e autenticação
 
 let usuarioAtual = null;
 let perfilAtual = null;
@@ -9,75 +9,64 @@ function esconderLoading() {
 }
 
 async function logout() {
+  sessionStorage.removeItem('userRole');
+  sessionStorage.removeItem('userId');
   await _supabase.auth.signOut();
   window.location.href = '/login.html';
 }
 
 async function carregarSessao(roleEsperado) {
-  return new Promise((resolve) => {
-    // Aguarda o Supabase restaurar a sessão via onAuthStateChange
-    // (mais confiável que getSession na navegação entre páginas)
-    let resolvido = false;
+  // 1. Pega a sessão atual
+  let { data: { session } } = await _supabase.auth.getSession();
 
-    const { data: { subscription } } = _supabase.auth.onAuthStateChange(async (event, session) => {
-      if (resolvido) return;
+  // Se não tem sessão tenta refresh
+  if (!session) {
+    const { data } = await _supabase.auth.refreshSession();
+    session = data?.session;
+  }
 
-      if (event === 'SIGNED_OUT' || !session) {
-        resolvido = true;
-        subscription.unsubscribe();
-        window.location.href = '/login.html';
-        resolve(false);
-        return;
-      }
+  if (!session) {
+    window.location.href = '/login.html';
+    return false;
+  }
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        resolvido = true;
-        subscription.unsubscribe();
+  usuarioAtual = session.user;
 
-        usuarioAtual = session.user;
+  // 2. Verifica role — usa cache do sessionStorage se disponível
+  //    (evita query ao banco em cada navegação entre páginas)
+  const cachedRole = sessionStorage.getItem('userRole');
+  const cachedId   = sessionStorage.getItem('userId');
 
-        const { data: perfil } = await _supabase
-          .from('perfis')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
+  let role = null;
 
-        if (!perfil) {
-          window.location.href = '/login.html';
-          resolve(false);
-          return;
-        }
+  if (cachedRole && cachedId === usuarioAtual.id) {
+    // Usa o cache
+    role = cachedRole;
+    perfilAtual = { role, id: usuarioAtual.id };
+  } else {
+    // Primeira vez — busca no banco e cacheia
+    const { data: perfil } = await _supabase
+      .from('perfis')
+      .select('*')
+      .eq('id', usuarioAtual.id)
+      .maybeSingle();
 
-        if (roleEsperado && perfil.role !== roleEsperado) {
-          const destino = perfil.role === 'mentor' ? '/admin/alunos.html' : '/aluno/perfil.html';
-          window.location.href = destino;
-          resolve(false);
-          return;
-        }
+    if (!perfil) {
+      window.location.href = '/login.html';
+      return false;
+    }
 
-        perfilAtual = perfil;
-        resolve(true);
-      }
-    });
+    role = perfil.role;
+    perfilAtual = perfil;
+    sessionStorage.setItem('userRole', role);
+    sessionStorage.setItem('userId', usuarioAtual.id);
+  }
 
-    // Fallback: se onAuthStateChange demorar mais de 5s, tenta getSession
-    setTimeout(async () => {
-      if (resolvido) return;
-      resolvido = true;
-      subscription.unsubscribe();
+  // 3. Verifica se o role bate com o esperado
+  if (roleEsperado && role !== roleEsperado) {
+    window.location.href = role === 'mentor' ? '/admin/alunos.html' : '/aluno/perfil.html';
+    return false;
+  }
 
-      const { data: { session } } = await _supabase.auth.getSession();
-      if (!session) { window.location.href = '/login.html'; resolve(false); return; }
-
-      usuarioAtual = session.user;
-      const { data: perfil } = await _supabase.from('perfis').select('*').eq('id', session.user.id).maybeSingle();
-      if (!perfil) { window.location.href = '/login.html'; resolve(false); return; }
-      if (roleEsperado && perfil.role !== roleEsperado) {
-        window.location.href = perfil.role === 'mentor' ? '/admin/alunos.html' : '/aluno/perfil.html';
-        resolve(false); return;
-      }
-      perfilAtual = perfil;
-      resolve(true);
-    }, 5000);
-  });
+  return true;
 }

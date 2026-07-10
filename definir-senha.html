@@ -6,7 +6,7 @@
 <title>Mentoria — Definir senha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="/css/base.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -25,25 +25,36 @@
   </div>
 </div>
 
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
 <script>
+// Processa o token do hash da URL enviado pelo Supabase
+(async () => {
+  const hash = window.location.hash.slice(1);
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token') || '';
+  if(accessToken){
+    await _supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+  }
+})();
+
 document.getElementById('definirBtn').onclick = async () => {
   const nova = document.getElementById('novaSenha').value;
   const confirma = document.getElementById('confirmarSenha').value;
   const erro = document.getElementById('senhaErro');
   erro.style.display = 'none';
-  if (nova.length < 6) { erro.textContent = 'A senha precisa ter no mínimo 6 caracteres.'; erro.style.display = 'block'; return; }
-  if (nova !== confirma) { erro.textContent = 'As senhas não conferem.'; erro.style.display = 'block'; return; }
+  if(nova.length < 6){ erro.textContent = 'A senha precisa ter no mínimo 6 caracteres.'; erro.style.display = 'block'; return; }
+  if(nova !== confirma){ erro.textContent = 'As senhas não conferem.'; erro.style.display = 'block'; return; }
   const btn = document.getElementById('definirBtn');
   btn.textContent = 'Salvando...'; btn.disabled = true;
   const { error } = await _supabase.auth.updateUser({ password: nova });
   btn.textContent = 'Salvar senha e entrar'; btn.disabled = false;
-  if (error) { erro.textContent = error.message; erro.style.display = 'block'; return; }
+  if(error){ erro.textContent = error.message; erro.style.display = 'block'; return; }
   const { data: { session } } = await _supabase.auth.getSession();
+  if(!session){ erro.textContent = 'Sessão inválida. Solicite um novo link.'; erro.style.display='block'; return; }
   const { data: perfil } = await _supabase.from('perfis').select('role').eq('id', session.user.id).single();
-  if (perfil?.role === 'mentor') window.location.href = '/admin/alunos.html';
-  else window.location.href = '/aluno/perfil.html';
+  window.location.href = perfil?.role === 'mentor' ? '/admin/alunos.html' : '/aluno/perfil.html';
 };
 </script>
 </body>

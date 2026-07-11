@@ -5,26 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mentoria — Edital</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display.swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/base.css">
-<link rel="stylesheet" href="/css/aluno.css">
+<link rel="stylesheet" href="/css/admin.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div class="loading-screen" id="loadingScreen">
-  <div class="loading-logo">M</div>
-  <div class="loading-spinner"></div>
-</div>
-
+<div class="loading-screen" id="loadingScreen"><div class="loading-logo">M</div><div class="loading-spinner"></div></div>
 <div id="appShell" style="display:none;">
 <div class="topbar">
-  <div class="brand">
-    <div class="seal">M</div>
-    <div class="brand-text">
-      <div class="t1">Mentoria</div>
-      <div class="t2">Área do aluno</div>
-    </div>
-  </div>
+  <div class="brand"><div class="seal">M</div><div class="brand-text"><div class="t1">Mentoria</div><div class="t2">Painel do mentor</div></div></div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span style="font-size:13px;color:var(--text-soft);" id="userEmailLabel">—</span>
     <button class="btn ghost small" onclick="logout()">Sair</button>
@@ -32,25 +22,70 @@
 </div>
 <div class="shell">
   <nav class="nav">
-    <div class="nav-group-label">Estudo</div>
-    <a href="/aluno/perfil.html" class=""><span class="dot"></span>Perfil</a>
-    <a href="/aluno/direcionamentos.html" class=""><span class="dot"></span>Direcionamentos</a>
-    <div class="nav-group-label">Revisão</div>
-    <a href="/aluno/prints.html" class=""><span class="dot"></span>Prints</a>
-    <a href="#" class=""><span class="dot"></span>Flashcards<span class="soon">em breve</span></a>
-    <a href="#" class=""><span class="dot"></span>Materiais<span class="soon">em breve</span></a>
-    <a href="/aluno/edital.html" class="active"><span class="dot"></span>Edital</a>
+    <div class="nav-group-label">Gestão</div>
+    <a href="/admin/alunos.html"><span class="dot"></span>Alunos</a>
+    <a href="/admin/direcionamentos.html"><span class="dot"></span>Direcionamentos</a>
+    <a href="/admin/edital.html" class="active"><span class="dot"></span>Edital</a>
   </nav>
   <main>
+    <h1 class="page-title">Editais</h1>
+    <p class="page-sub">Importe o conteúdo programático e vincule aos alunos</p>
+    <div class="upload-box">
+      CSV do conteúdo programático (separador <span style="font-family:monospace;">;</span>)
+      <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn ghost small" id="editalSelecionarArquivoBtn">Selecionar arquivo .csv</button>
+      </div>
+      <input type="file" id="editalFileInput" accept=".csv" style="display:none">
+      <textarea class="csv-input" id="editalCsvInput" placeholder="Materia;Assunto"></textarea>
+      <div style="margin-top:10px;"><button class="btn" id="editalImportarBtn">Importar conteúdo programático</button></div>
+    </div>
+    <div class="section-head"><h2>Editais cadastrados</h2></div>
+    <div id="editalListMentor"></div>
 
-    <h1 class="page-title">Edital</h1>
-    <p class="page-sub" id="editalSubtitulo">—</p>
-    <div id="editalConteudo"></div>
+    <div class="modal-overlay" id="editalInfoModalOverlay" style="display:none;">
+      <div class="modal">
+        <h3 class="display">Sobre este edital</h3>
+        <p id="editalInfoCount">—</p>
+        <label>Concurso</label><input type="text" id="editalInfoConcurso" placeholder="Ex: Receita Federal">
+        <label>Cargo</label><input type="text" id="editalInfoCargo" placeholder="Ex: Auditor Fiscal">
+        <label>Banca</label><input type="text" id="editalInfoBanca" placeholder="Ex: FGV">
+        <label>Data da prova</label><input type="text" id="editalInfoData" placeholder="dd/mm/aaaa ou deixe em branco">
+        <div class="modal-actions">
+          <button class="btn ghost" id="editalInfoCancelar">Cancelar</button>
+          <button class="btn" id="editalInfoConfirmar">Salvar edital</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="vincularEditalModalOverlay" style="display:none;">
+      <div class="modal">
+        <h3 class="display">Vincular edital</h3>
+        <p>Escolha o aluno que vai ver este edital.</p>
+        <label>Aluno</label>
+        <select id="vincularEditalSelect" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-family:Inter;font-size:14px;margin-bottom:14px;background:var(--bg);"></select>
+        <div class="modal-actions">
+          <button class="btn ghost" id="vincularEditalCancelar">Cancelar</button>
+          <button class="btn" id="vincularEditalConfirmar">Vincular</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="freqModalOverlay" style="display:none;">
+      <div class="modal modal-lg">
+        <h3 class="display">Atualizar frequência semanal</h3>
+        <p>Cole o CSV com as questões feitas nesta semana (somam ao total).</p>
+        <textarea class="csv-input" id="freqCsvInput" style="min-height:140px;" placeholder="Materia;Assunto;Questoes"></textarea>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button class="btn ghost" id="freqModalCancelar">Cancelar</button>
+          <button class="btn" id="freqModalConfirmar">Somar à frequência</button>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 </div>
 <script src="/js/config.js"></script>
 <script src="/js/auth.js"></script>
-<script src="/js/aluno/edital.js"></script>
+<script src="/js/admin/edital.js"></script>
 </body>
 </html>

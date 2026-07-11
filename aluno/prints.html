@@ -93,6 +93,14 @@
   </main>
 </div>
 </div>
+
+<!-- Zoom preview -->
+<div id="zoomPreviewOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;flex-direction:column;align-items:center;justify-content:center;">
+  <button id="zoomPreviewClose" style="position:absolute;top:18px;right:22px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;">×</button>
+  <img id="zoomPreviewImg" src="" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px;">
+  <div id="zoomPreviewNome" style="margin-top:10px;font-size:12px;color:rgba(255,255,255,.5);"></div>
+</div>
+
 <script src="/js/config.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/aluno/prints.js"></script>

@@ -137,6 +137,11 @@ document.getElementById('importarBtn').onclick = async () => {
   const {error}=await _supabase.from('blocos').insert(inserts);
   btn.textContent='Importar blocos'; btn.disabled=false;
   if(error){ alert('Erro ao importar: '+error.message); return; }
+
+  // Atualiza meta_blocos com o total real de blocos do direcionamento
+  const totalBlocos = (dir.blocos?.length || 0) + inserts.length;
+  await _supabase.from('direcionamentos').update({ meta_blocos: totalBlocos }).eq('id', dir.id);
+
   document.getElementById('importarBlocosModal').style.display='none';
   await carregarAlunos();
   showDetalheAluno(mentorAlunoIdx);
@@ -168,7 +173,7 @@ document.getElementById('cadastrarAlunoConfirmar').onclick = async () => {
 
 async function init(){
   const ok = await carregarSessao('mentor');
-  if(!ok) return;
+  if(!ok){ esconderLoading(); document.body.innerHTML='<div style="padding:40px;text-align:center;font-family:Inter"><h2>Erro de autenticação</h2><p>Verifique o console (F12) e reporte o erro.</p><a href="/admin/alunos.html">Voltar</a></div>'; return; }
 
   document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
 

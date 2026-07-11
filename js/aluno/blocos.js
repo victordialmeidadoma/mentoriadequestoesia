@@ -23,6 +23,16 @@ async function carregarBlocos(){
     .eq('id', direcId)
     .single();
   if(error || !data){ window.location.href='/aluno/direcionamentos.html'; return; }
+
+  // Ordena blocos por código: 01A, 01B, 02A, 02B...
+  if(data.blocos) {
+    data.blocos.sort((a, b) => {
+      const norm = s => s.replace(/([0-9]+)([A-Za-z]+)/, (_, n, l) =>
+        n.padStart(4, '0') + l.toUpperCase());
+      return norm(a.codigo).localeCompare(norm(b.codigo));
+    });
+  }
+
   direcAtivo = data;
 
   document.getElementById('blocosTitulo').textContent = `Direcionamento ${data.numero} · ${data.carreira}`;
@@ -77,7 +87,13 @@ function renderEtapas(b){
 
   let action = '';
   if(e===0){
-    action=`<div class="step-action center-btn"><button class="btn" data-action="iniciar" data-id="${b.id}">Iniciar bloco</button></div>`;
+    const jaAgendado = b.pre_agendado;
+    action=`<div class="step-action center-btn" style="gap:10px;display:flex;justify-content:center;flex-wrap:wrap;">
+      <button class="btn" data-action="iniciar" data-id="${b.id}">Iniciar bloco</button>
+      ${!jaAgendado
+        ? `<button class="btn ghost" data-action="pre-agendar" data-id="${b.id}">Pré-agendar para amanhã</button>`
+        : `<span style="font-size:12px;color:var(--amber);font-weight:600;padding:8px;">📅 Pré-agendado para amanhã</span>`}
+    </div>`;
   } else if(e===1){
     const boxes = Array.from({length:11},(_,i)=>i).map(n=>`<div class="acertos-box" data-action="salvar-acertos" data-id="${b.id}" data-val="${n}">${n}</div>`).join('');
     action=`<div class="step-action"><div class="ask">Quantas das 10 questões você acertou?</div><div class="acertos-grid">${boxes}</div></div>`;
@@ -124,6 +140,7 @@ document.getElementById('blocoList').addEventListener('click', async (e)=>{
     const id=btn.dataset.id, action=btn.dataset.action;
     const bloco = direcAtivo.blocos.find(b=>b.id===id);
     if(action==='iniciar'){ if(bloco.link) window.open(bloco.link,'_blank'); await atualizarBloco(id,{etapa:1}); }
+    if(action==='pre-agendar'){ await atualizarBloco(id,{pre_agendado:true}); }
     if(action==='salvar-acertos'){ await atualizarBloco(id,{acertos:parseInt(btn.dataset.val),etapa:2}); }
     if(action==='abrir-prints'){ document.getElementById('fileInput-'+id).click(); }
     if(action==='finalizar'){ await atualizarBloco(id,{etapa:4}); }

@@ -1,162 +1,128 @@
 // Depende de: config.js, auth.js
 
 let alunosMentor = [];
-let mentorAlunoIdx = null;
+let mDirecAlunoIdx = null;
 
 async function carregarAlunos(){
-  const { data, error } = await _supabase
+  const { data } = await _supabase
     .from('perfis')
     .select('*, direcionamentos(*, blocos(*))')
-    .eq('role','aluno')
-    .order('nome');
-  if(error){ console.error(error); return; }
+    .eq('role','aluno').order('nome');
   alunosMentor = data||[];
-  renderMentor();
+  renderMDirecAlunoList();
 }
 
-function renderMentor(){
-  document.getElementById('mTotalAlunos').textContent = alunosMentor.length;
-  const totalBlocos = alunosMentor.reduce((s,a)=>{
-    const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-    return s+(dir?.blocos||[]).filter(b=>b.etapa===4).length;
-  },0);
-  document.getElementById('mTotalBlocos').textContent = totalBlocos;
-  const comBlocos = alunosMentor.filter(a=>{
-    const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-    return (dir?.blocos||[]).some(b=>b.etapa===4);
-  });
-  const media = comBlocos.length ? Math.round(comBlocos.reduce((s,a)=>{
-    const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-    const f=(dir?.blocos||[]).filter(b=>b.etapa===4);
-    return s+(f.length?f.reduce((x,b)=>x+(b.acertos||0),0)/f.length*10:0);
-  },0)/comBlocos.length) : 0;
-  document.getElementById('mAprovGeral').innerHTML = media+'<span class="unit">%</span>';
-
-  const list = document.getElementById('alunoListMentor');
-  list.innerHTML = '';
+function renderMDirecAlunoList(){
+  const list=document.getElementById('mDirecAlunoList');
+  list.innerHTML='';
   if(!alunosMentor.length){
-    list.innerHTML = '<div class="empty"><span class="display">Nenhum aluno ainda</span>Clique em "Cadastrar aluno" para adicionar o primeiro.</div>';
+    list.innerHTML='<div class="empty"><span class="display">Nenhum aluno ainda</span></div>';
     return;
   }
   alunosMentor.forEach((a,idx)=>{
-    const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-    const feitos=(dir?.blocos||[]).filter(b=>b.etapa===4).length;
-    const meta=dir?.meta_blocos||0;
-    const pct=meta?Math.min(100,Math.round((feitos/meta)*100)):0;
+    const atual=(a.direcionamentos||[]).find(d=>d.status==='atual');
     const div=document.createElement('div');
     div.className='aluno-pill';
     div.innerHTML=`
       <div>
         <div class="nome">${a.nome}</div>
-        <div class="foco">${(a.carreiras||[]).join(', ')||'—'} · ${feitos}/${meta} blocos</div>
+        <div class="foco">${(a.direcionamentos||[]).length} direcionamento${(a.direcionamentos||[]).length!==1?'s':''} · atual: ${atual?'Dir. '+atual.numero:'—'}</div>
       </div>
-      <div class="pct">${pct}%</div>`;
-    div.onclick=()=>showDetalheAluno(idx);
+      <div class="pct">${atual?atual.carreira:''}</div>`;
+    div.onclick=()=>showMDirecDetalhe(idx);
     list.appendChild(div);
   });
 }
 
-function showDetalheAluno(idx){
-  mentorAlunoIdx=idx;
+function showMDirecDetalhe(idx){
+  mDirecAlunoIdx=idx;
   const a=alunosMentor[idx];
-  document.getElementById('detalheAlunoMentor').style.display='block';
-  document.getElementById('detalheNome').textContent=a.nome;
-  const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-  const feitos=(dir?.blocos||[]).filter(b=>b.etapa===4);
-  const meta=dir?.meta_blocos||0;
-  const pct=meta?Math.min(100,Math.round((feitos.length/meta)*100)):0;
-  const aprov=feitos.length?Math.round(feitos.reduce((s,b)=>s+(b.acertos||0),0)/feitos.length*10):0;
-  document.getElementById('dPct').innerHTML=pct+'<span class="unit">%</span>';
-  document.getElementById('dBlocosFeitos').innerHTML=`${feitos.length}<span class="unit">/ ${meta}</span>`;
-  document.getElementById('dAproveitamento').innerHTML=aprov+'<span class="unit">%</span>';
-  renderDetalheBlocoList();
-  document.getElementById('detalheAlunoMentor').scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('mDirecDetalhe').style.display='block';
+  document.getElementById('mDirecNomeAluno').textContent=a.nome;
+  renderMDirecList();
+  document.getElementById('mDirecDetalhe').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function renderDetalheBlocoList(){
-  const a=alunosMentor[mentorAlunoIdx];
-  const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-  const list=document.getElementById('detalheBlocoList');
-  if(!(dir?.blocos||[]).length){
-    list.innerHTML='<div class="empty">Nenhum bloco importado ainda.</div>';
+function renderMDirecList(){
+  const a=alunosMentor[mDirecAlunoIdx];
+  const list=document.getElementById('mDirecList');
+  list.innerHTML='';
+  if(!(a.direcionamentos||[]).length){
+    list.innerHTML='<div class="empty">Nenhum direcionamento ainda.</div>';
     return;
   }
-  list.innerHTML='';
-  dir.blocos.forEach(b=>{
+  const R=26,C=2*Math.PI*R;
+  a.direcionamentos.slice().reverse().forEach(d=>{
+    const feitos=(d.blocos||[]).filter(b=>b.etapa===4).length;
+    const meta=d.meta_blocos||1;
+    const pct=Math.min(100,Math.round((feitos/meta)*100));
+    const offset=C-(C*pct/100);
     const div=document.createElement('div');
-    div.className='bloco';
+    div.className='direc-card';
+    div.style.cursor='default';
     div.innerHTML=`
-      <div class="bloco-header" style="cursor:default;">
-        <div class="bloco-codigo">Bloco ${b.codigo}</div>
-        <div class="bloco-info">
-          <div class="nome">${b.disciplina}</div>
-          <div class="meta">10 questões</div>
+      <div class="ring">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle fill="none" stroke="#E8F7EF" stroke-width="6" cx="32" cy="32" r="${R}"/>
+          <circle fill="none" stroke="#0B6E4F" stroke-width="6" stroke-linecap="round"
+            cx="32" cy="32" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${offset}"
+            style="transform:rotate(-90deg);transform-origin:50% 50%"/>
+        </svg>
+        <div class="ring-label">${pct}%</div>
+      </div>
+      <div class="info" style="flex:1;">
+        <div class="titulo-row">
+          <span class="titulo">Direcionamento ${d.numero}</span>
+          <span class="badge-status ${d.status}">${d.status==='atual'?'<span class="pulse"></span>Em andamento':'Encerrado'}</span>
         </div>
-        ${b.acertos!==null&&b.etapa===4?`<div class="acertos-circle">${b.acertos}<span class="den">/10</span></div>`:''}
-        <div class="bloco-status ${b.etapa===4?'feito':b.pre_agendado?'planejado':'pendente'}">${b.etapa===4?'Feito':b.pre_agendado?'Pré-agendado':'Pendente'}</div>
+        <div class="carreira">${d.carreira}</div>
+        <div class="sub">${d.periodo||''} · ${feitos}/${meta} blocos</div>
       </div>`;
     list.appendChild(div);
   });
 }
 
-document.getElementById('fecharDetalheBtn').onclick=()=>document.getElementById('detalheAlunoMentor').style.display='none';
-
-// Importar CSV de blocos
-document.getElementById('importarBtn').onclick = async () => {
-  const raw=document.getElementById('csvInput').value.trim();
-  if(!raw||mentorAlunoIdx===null) return;
-  const a=alunosMentor[mentorAlunoIdx];
-  const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-  if(!dir){ alert('Este aluno não tem direcionamento ativo.'); return; }
-  const linhas=raw.split('\n').filter(l=>l.trim());
-  const inserts=linhas.map(l=>{
-    const [codigo,disciplina,link]=l.split(',');
-    if(!codigo||!disciplina) return null;
-    return {direcionamento_id:dir.id,aluno_id:a.id,codigo:codigo.trim(),disciplina:disciplina.trim(),link:(link||'').trim(),etapa:0};
-  }).filter(Boolean);
-  if(!inserts.length) return;
-  await _supabase.from('blocos').insert(inserts);
-  document.getElementById('csvInput').value='';
-  await carregarAlunos();
-  showDetalheAluno(mentorAlunoIdx);
-};
-
-// Cadastrar aluno
-document.getElementById('cadastrarAlunoBtn').onclick=()=>{
-  ['novoAlunoNome','novoAlunoEmail','novoAlunoFoco'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cadastroAlunoErro').style.display='none';
-  document.getElementById('cadastrarAlunoModalOverlay').style.display='flex';
-};
-document.getElementById('cadastrarAlunoCancelar').onclick=()=>document.getElementById('cadastrarAlunoModalOverlay').style.display='none';
-
-document.getElementById('cadastrarAlunoConfirmar').onclick = async () => {
-  const nome=document.getElementById('novoAlunoNome').value.trim();
-  const email=document.getElementById('novoAlunoEmail').value.trim();
-  const foco=document.getElementById('novoAlunoFoco').value.trim();
-  const erro=document.getElementById('cadastroAlunoErro');
-  if(!nome||!email){ erro.textContent='Preencha nome e e-mail.'; erro.style.display='block'; return; }
-  const btn=document.getElementById('cadastrarAlunoConfirmar');
-  btn.textContent='Cadastrando...'; btn.disabled=true;
-  erro.style.display='none';
-  const { data:{ session } } = await _supabase.auth.getSession();
-  const res=await fetch('https://agxamsmyztmyesctiqkm.supabase.co/functions/v1/cadastrar-aluno',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-    body:JSON.stringify({nome,email,foco})
-  });
-  const json=await res.json();
-  btn.textContent='Cadastrar'; btn.disabled=false;
-  if(!res.ok||json.error){ erro.textContent=json.error||'Erro ao cadastrar.'; erro.style.display='block'; return; }
-  document.getElementById('cadastrarAlunoModalOverlay').style.display='none';
-  await carregarAlunos();
-};
-
 async function init(){
   const ok = await carregarSessao('mentor');
   if(!ok) return;
+
   document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+
+  // Handlers dentro do init para garantir que o DOM está pronto
+  document.getElementById('mDirecFecharBtn').onclick =
+    ()=>document.getElementById('mDirecDetalhe').style.display='none';
+
+  document.getElementById('mDirecNovoBtn').onclick = ()=>{
+    const a=alunosMentor[mDirecAlunoIdx];
+    const ultimo=(a?.direcionamentos||[]).slice(-1)[0];
+    document.getElementById('novoDirecNumero').value='';
+    document.getElementById('novoDirecCarreira').value=ultimo?.carreira||'';
+    document.getElementById('novoDirecModalOverlay').style.display='flex';
+  };
+
+  document.getElementById('novoDirecCancelar').onclick =
+    ()=>document.getElementById('novoDirecModalOverlay').style.display='none';
+
+  document.getElementById('novoDirecConfirmar').onclick = async () => {
+    const numero=document.getElementById('novoDirecNumero').value.trim();
+    const carreira=document.getElementById('novoDirecCarreira').value.trim();
+    if(!numero||!carreira) return;
+    const a=alunosMentor[mDirecAlunoIdx];
+    const btn=document.getElementById('novoDirecConfirmar');
+    btn.textContent='Criando...'; btn.disabled=true;
+    await _supabase.from('direcionamentos').insert({
+      aluno_id:a.id, numero, carreira,
+      status:'atual', meta_blocos:Math.round(((a.horas_semanais||20)*60)/30)
+    });
+    btn.textContent='Criar direcionamento'; btn.disabled=false;
+    document.getElementById('novoDirecModalOverlay').style.display='none';
+    await carregarAlunos();
+    showMDirecDetalhe(mDirecAlunoIdx);
+  };
+
   esconderLoading();
   document.getElementById('appShell').style.display='block';
   await carregarAlunos();
 }
+
 init();

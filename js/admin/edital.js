@@ -37,7 +37,14 @@ function parseEditalCSV(texto){
   return topicos;
 }
 
-document.getElementById('editalSelecionarArquivoBtn').onclick=()=>document.getElementById('editalFileInput').click();
+async function init(){
+  const ok = await carregarSessao('mentor');
+  if(!ok) return;
+
+  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+
+  // Todos os handlers aqui dentro, após autenticação
+  document.getElementById('editalSelecionarArquivoBtn').onclick=()=>document.getElementById('editalFileInput').click();
 document.getElementById('editalFileInput').onchange=(e)=>{
   const file=e.target.files[0]; if(!file) return;
   const r=new FileReader();
@@ -170,10 +177,6 @@ document.getElementById('freqModalConfirmar').onclick = async () => {
   await carregarEditalList();
 };
 
-async function init(){
-  const ok = await carregarSessao('mentor');
-  if(!ok) return;
-  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
   esconderLoading();
   document.getElementById('appShell').style.display='block';
   await carregarAlunos();

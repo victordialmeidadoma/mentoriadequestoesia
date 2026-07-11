@@ -99,22 +99,9 @@ function renderDetalheBlocoList(){
   });
 }
 
-document.getElementById('fecharDetalheBtn').onclick=()=>document.getElementById('detalheAlunoMentor').style.display='none';
 
 // Modal importar blocos
-document.getElementById('abrirImportarBlocos').onclick=()=>{
-  document.getElementById('csvInput').value='';
-  document.getElementById('importarBlocosModal').style.display='flex';
-};
-document.getElementById('cancelarImportarBlocos').onclick=()=>document.getElementById('importarBlocosModal').style.display='none';
 
-document.getElementById('csvFileBtn').onclick=()=>document.getElementById('csvFileInput').click();
-document.getElementById('csvFileInput').onchange=(e)=>{
-  const file=e.target.files[0]; if(!file) return;
-  const r=new FileReader();
-  r.onload=(ev)=>{ document.getElementById('csvInput').value=ev.target.result; };
-  r.readAsText(file,'utf-8');
-};
 
 document.getElementById('importarBtn').onclick = async () => {
   const raw=document.getElementById('csvInput').value.trim();
@@ -156,12 +143,6 @@ document.getElementById('importarBtn').onclick = async () => {
 };
 
 // Cadastrar aluno
-document.getElementById('cadastrarAlunoBtn').onclick=()=>{
-  ['novoAlunoNome','novoAlunoEmail','novoAlunoFoco'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cadastroAlunoErro').style.display='none';
-  document.getElementById('cadastrarAlunoModalOverlay').style.display='flex';
-};
-document.getElementById('cadastrarAlunoCancelar').onclick=()=>document.getElementById('cadastrarAlunoModalOverlay').style.display='none';
 
 document.getElementById('cadastrarAlunoConfirmar').onclick = async () => {
   const nome=document.getElementById('novoAlunoNome').value.trim();
@@ -188,7 +169,35 @@ document.getElementById('cadastrarAlunoConfirmar').onclick = async () => {
 async function init(){
   const ok = await carregarSessao('mentor');
   if(!ok) return;
+
   document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+
+  document.getElementById('fecharDetalheBtn').onclick =
+    ()=>document.getElementById('detalheAlunoMentor').style.display='none';
+
+  document.getElementById('abrirImportarBlocos').onclick=()=>{
+    document.getElementById('csvInput').value='';
+    document.getElementById('importarBlocosModal').style.display='flex';
+  };
+  document.getElementById('cancelarImportarBlocos').onclick =
+    ()=>document.getElementById('importarBlocosModal').style.display='none';
+  document.getElementById('csvFileBtn').onclick =
+    ()=>document.getElementById('csvFileInput').click();
+  document.getElementById('csvFileInput').onchange=(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const r=new FileReader();
+    r.onload=(ev)=>{ document.getElementById('csvInput').value=ev.target.result; };
+    r.readAsText(file,'utf-8');
+  };
+
+  document.getElementById('cadastrarAlunoBtn').onclick=()=>{
+    ['novoAlunoNome','novoAlunoEmail','novoAlunoFoco'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('cadastroAlunoErro').style.display='none';
+    document.getElementById('cadastrarAlunoModalOverlay').style.display='flex';
+  };
+  document.getElementById('cadastrarAlunoCancelar').onclick =
+    ()=>document.getElementById('cadastrarAlunoModalOverlay').style.display='none';
+
   esconderLoading();
   document.getElementById('appShell').style.display='block';
   await carregarAlunos();

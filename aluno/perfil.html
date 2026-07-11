@@ -42,7 +42,6 @@
     <a href="/aluno/edital.html" class=""><span class="dot"></span>Edital</a>
   </nav>
   <main>
-
     <div class="profile-hero">
       <div class="avatar" id="perfilAvatar">—</div>
       <div>
@@ -50,16 +49,52 @@
         <div class="foco" id="perfilFoco"></div>
       </div>
     </div>
+
+    <!-- Dia de estudos no perfil -->
+    <div class="card" style="margin-bottom:24px;border:1.5px solid var(--g2);background:var(--g-soft);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:Outfit;font-weight:700;font-size:17px;color:var(--ink);">Dia de estudos</div>
+          <div style="font-size:13px;color:var(--text-soft);margin-top:2px;" id="diaSubtitulo">Carregando...</div>
+        </div>
+        <button class="btn" id="iniciarDiaBtn">Iniciar dia de estudos</button>
+      </div>
+      <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--g1);margin-bottom:6px;">Revisão de prints</div>
+      <div id="diaRevisaoConteudo" style="font-size:13.5px;color:var(--text-soft);margin-bottom:14px;">—</div>
+      <div style="border-top:1px solid var(--line);margin-bottom:14px;"></div>
+      <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--g1);margin-bottom:6px;">Blocos de hoje</div>
+      <div id="diaPreAgendadoConteudo" style="font-size:13.5px;color:var(--text-soft);">—</div>
+    </div>
+
     <div class="grid grid-3" style="margin-bottom:24px;">
       <div class="card stat-card"><div class="label">Direcionamento atual</div><div class="value" id="pPct">—</div></div>
       <div class="card stat-card"><div class="label">Blocos concluídos</div><div class="value" id="pTotalBlocos">—</div></div>
       <div class="card stat-card"><div class="label">Aproveitamento médio</div><div class="value" id="pAprov">—</div></div>
     </div>
+    <div id="metasDoDia" style="margin-bottom:24px;"></div>
+
     <div class="section-head"><h2>Informações</h2></div>
     <div class="card">
       <div class="info-row"><span class="k">Nome</span><span class="v" id="infoNome">—</span></div>
       <div class="info-row"><span class="k">Concursos em foco</span><span class="v" id="infoCarreiras">—</span></div>
       <div class="info-row"><span class="k">Início da mentoria</span><span class="v" id="infoInicio">—</span></div>
+    </div>
+
+    <!-- Modal dia de estudos -->
+    <div class="modal-overlay" id="diaModalOverlay" style="display:none;">
+      <div class="modal">
+        <h3 class="display">Dia de estudos</h3>
+        <p>Siga as etapas na ordem.</p>
+        <div class="dia-step" id="diaStep1">
+          <div class="dia-step-head"><div class="dia-step-num" id="diaCheck1">1</div><div class="dia-step-title">Revisar prints</div></div>
+          <div class="dia-step-body" id="diaBody1"></div>
+        </div>
+        <div class="dia-step" id="diaStep2">
+          <div class="dia-step-head"><div class="dia-step-num" id="diaCheck2">2</div><div class="dia-step-title">Iniciar blocos pré-agendados</div></div>
+          <div class="dia-step-body" id="diaBody2"></div>
+        </div>
+        <div class="modal-actions"><button class="btn ghost" id="diaModalFechar">Fechar</button></div>
+      </div>
     </div>
   </main>
 </div>

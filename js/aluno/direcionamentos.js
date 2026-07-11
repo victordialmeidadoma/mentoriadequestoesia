@@ -95,14 +95,39 @@ function renderDiaModal(){
   document.getElementById('diaCheck2').className = 'dia-step-num'+(diaEtapa>2?' done':'');
 
   const body1 = document.getElementById('diaBody1');
+
   if(!direc){
     body1.innerHTML = '<div class="empty-step">Nenhum direcionamento ativo.</div>';
   } else {
-    const comPrints = (direc.blocos||[]).filter(b=>b.prints_count>0);
-    body1.innerHTML = (comPrints.length===0
-      ? '<div class="empty-step">Nenhum print novo para revisar.</div>'
-      : comPrints.map(b=>`<div class="dia-print-mini"><div class="print-thumb">📄</div><div><div class="tag">${b.disciplina}</div><div class="disc">${b.prints_count} print${b.prints_count>1?'s':''}</div></div></div>`).join('')
-    )+'<button class="btn small" id="diaAvancar1" style="margin-top:12px;">Marcar revisão como concluída</button>';
+    // Encontra o direcionamento anterior (o mais recente antes do atual)
+    const idxAtual = direcionamentos.findIndex(d=>d.status==='atual');
+    const anterior = direcionamentos[idxAtual + 1] || null; // lista está em ordem desc
+
+    const blocsComPrints = anterior
+      ? (anterior.blocos||[]).filter(b=>b.prints_count>0)
+      : [];
+
+    if(!anterior){
+      body1.innerHTML = '<div class="empty-step">Este é o primeiro direcionamento — nenhum print anterior para revisar.</div>'
+        + '<button class="btn small" id="diaAvancar1" style="margin-top:12px;">Pular e ir para os blocos</button>';
+    } else if(blocsComPrints.length===0){
+      body1.innerHTML = `<div class="empty-step">Nenhum print salvo no Direcionamento ${anterior.numero} para revisar hoje.</div>`
+        + '<button class="btn small" id="diaAvancar1" style="margin-top:12px;">Pular e ir para os blocos</button>';
+    } else {
+      body1.innerHTML = `
+        <div style="font-size:12px;color:var(--text-soft);margin-bottom:10px;">
+          Revisando prints do <b>Direcionamento ${anterior.numero}</b>
+        </div>
+        ${blocsComPrints.map(b=>`
+          <div class="dia-print-mini">
+            <div class="print-thumb">📄</div>
+            <div>
+              <div class="tag">${b.disciplina}</div>
+              <div class="disc">${b.prints_count} print${b.prints_count>1?'s':''} · <a href="/aluno/prints.html" style="color:var(--g1);font-weight:600;">Ver na aba Prints</a></div>
+            </div>
+          </div>`).join('')}
+        <button class="btn small" id="diaAvancar1" style="margin-top:12px;">Marcar revisão como concluída</button>`;
+    }
     document.getElementById('diaAvancar1').onclick = ()=>{ diaEtapa=2; renderDiaModal(); };
   }
 
@@ -111,7 +136,7 @@ function renderDiaModal(){
   if(!direc){ body2.innerHTML='<div class="empty-step">Nenhum direcionamento ativo.</div>'; return; }
   const pre = (direc.blocos||[]).filter(b=>b.pre_agendado&&b.etapa===0);
   body2.innerHTML = pre.length===0
-    ? '<div class="empty-step">Nenhum bloco pré-agendado.</div>'
+    ? '<div class="empty-step">Nenhum bloco pré-agendado para hoje.<br><small style="color:var(--text-soft);">Vá até os blocos e clique em "Pré-agendar para amanhã" nos que quer fazer hoje.</small></div>'
     : pre.map(b=>`<div class="dia-bloco-mini"><span class="l"><span class="cod">${b.codigo}</span>${b.disciplina}</span><a class="btn small" href="/aluno/blocos.html?id=${direc.id}&bloco=${b.id}">Iniciar bloco</a></div>`).join('');
 }
 

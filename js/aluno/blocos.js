@@ -96,7 +96,15 @@ function renderEtapas(b){
     </div>`;
   } else if(e===1){
     const boxes = Array.from({length:11},(_,i)=>i).map(n=>`<div class="acertos-box" data-action="salvar-acertos" data-id="${b.id}" data-val="${n}">${n}</div>`).join('');
-    action=`<div class="step-action"><div class="ask">Quantas das 10 questões você acertou?</div><div class="acertos-grid">${boxes}</div></div>`;
+    action=`<div class="step-action">
+      ${b.link ? `<div style="text-align:center;margin-bottom:12px;">
+        <a href="${b.link}" target="_blank" style="font-size:12.5px;color:var(--g1);font-weight:600;text-decoration:none;">
+          ↗ Reabrir bloco no TEC
+        </a>
+      </div>` : ''}
+      <div class="ask">Quantas das 10 questões você acertou?</div>
+      <div class="acertos-grid">${boxes}</div>
+    </div>`;
   } else if(e===2){
     action=`<div class="step-action">
       <div class="dropzone" data-action="abrir-prints" data-id="${b.id}">

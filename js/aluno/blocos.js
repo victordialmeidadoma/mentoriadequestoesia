@@ -92,7 +92,7 @@ function renderEtapas(b){
       <button class="btn" data-action="iniciar" data-id="${b.id}">Iniciar bloco</button>
       ${!jaAgendado
         ? `<button class="btn ghost" data-action="pre-agendar" data-id="${b.id}">Pré-agendar para amanhã</button>`
-        : `<span style="font-size:12px;color:var(--amber);font-weight:600;padding:8px;">📅 Pré-agendado para amanhã</span>`}
+        : `<span style="font-size:12px;color:var(--amber);font-weight:600;padding:8px;">Pré-agendado para amanhã</span>`}
     </div>`;
   } else if(e===1){
     const boxes = Array.from({length:11},(_,i)=>i).map(n=>`<div class="acertos-box" data-action="salvar-acertos" data-id="${b.id}" data-val="${n}">${n}</div>`).join('');
@@ -105,6 +105,10 @@ function renderEtapas(b){
         <div class="dz-sub">Já ficam marcados como ${b.disciplina}</div>
       </div>
       <input type="file" id="fileInput-${b.id}" multiple accept="image/*" style="display:none">
+      <label style="display:flex;align-items:center;gap:10px;margin-top:14px;cursor:pointer;font-size:13px;color:var(--text-soft);">
+        <input type="checkbox" id="semPrints-${b.id}" data-action="sem-prints" data-id="${b.id}" style="width:16px;height:16px;accent-color:var(--g1);cursor:pointer;">
+        Não tive prints neste bloco — avançar para finalizar
+      </label>
     </div>`;
   } else if(e===3){
     action=`<div class="step-action center-btn"><button class="trophy-btn" data-action="finalizar" data-id="${b.id}">${trophy} Finalizar bloco</button></div>`;
@@ -154,10 +158,15 @@ document.getElementById('blocoList').addEventListener('click', async (e)=>{
   }
 });
 
-document.getElementById('blocoList').addEventListener('change', (e)=>{
+document.getElementById('blocoList').addEventListener('change', async (e)=>{
   if(e.target.matches('input[type=file]')){
     const id = e.target.id.replace('fileInput-','');
     if(e.target.files.length) abrirModalPrints(id, Array.from(e.target.files));
+  }
+  // Checkbox "sem prints" — avança direto para etapa 3 (finalizar)
+  if(e.target.matches('[data-action="sem-prints"]') && e.target.checked){
+    const id = e.target.dataset.id;
+    await atualizarBloco(id, {etapa:3});
   }
 });
 document.getElementById('blocoList').addEventListener('dragover',(e)=>{ const dz=e.target.closest('.dropzone'); if(dz){e.preventDefault();dz.classList.add('dragover');} });

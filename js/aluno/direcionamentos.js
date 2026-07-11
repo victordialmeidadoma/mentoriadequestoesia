@@ -88,7 +88,7 @@ document.getElementById('diaModalFechar').onclick = () => {
   document.getElementById('diaModalOverlay').style.display = 'none';
 };
 
-function renderDiaModal(){
+async function renderDiaModal(){
   const direc = direcionamentos.find(d=>d.status==='atual');
   document.getElementById('diaStep2').className = 'dia-step'+(diaEtapa<2?' locked':'');
   document.getElementById('diaCheck1').className = 'dia-step-num'+(diaEtapa>1?' done':'');
@@ -99,36 +99,52 @@ function renderDiaModal(){
   if(!direc){
     body1.innerHTML = '<div class="empty-step">Nenhum direcionamento ativo.</div>';
   } else {
-    // Encontra o direcionamento anterior (o mais recente antes do atual)
     const idxAtual = direcionamentos.findIndex(d=>d.status==='atual');
-    const anterior = direcionamentos[idxAtual + 1] || null; // lista está em ordem desc
+    const anterior = direcionamentos[idxAtual + 1] || null;
 
-    const blocsComPrints = anterior
-      ? (anterior.blocos||[]).filter(b=>b.prints_count>0)
-      : [];
+    // Busca prints do direcionamento anterior ordenados do mais antigo para o mais recente
+    let blocsComPrints = [];
+    if(anterior){
+      const { data: prints } = await _supabase
+        .from('prints')
+        .select('*, blocos!inner(direcionamento_id)')
+        .eq('aluno_id', usuarioAtual.id)
+        .eq('blocos.direcionamento_id', anterior.id)
+        .order('created_at', { ascending: true }); // mais antigos primeiro
+
+      // Agrupa por bloco para exibição
+      const porBloco = {};
+      (prints||[]).forEach(p=>{
+        const key = p.bloco_id||'sem-bloco';
+        if(!porBloco[key]) porBloco[key]={ disciplina: (anterior.blocos||[]).find(b=>b.id===p.bloco_id)?.disciplina||'Geral', count:0 };
+        porBloco[key].count++;
+      });
+      blocsComPrints = Object.values(porBloco);
+    }
 
     if(!anterior){
       body1.innerHTML = '<div class="empty-step">Este é o primeiro direcionamento — nenhum print anterior para revisar.</div>'
         + '<button class="btn small" id="diaAvancar1" style="margin-top:12px;">Pular e ir para os blocos</button>';
     } else if(blocsComPrints.length===0){
-      body1.innerHTML = `<div class="empty-step">Nenhum print salvo no Direcionamento ${anterior.numero} para revisar hoje.</div>`
+      body1.innerHTML = `<div class="empty-step">Nenhum print salvo no Direcionamento ${anterior.numero}.</div>`
         + '<button class="btn small" id="diaAvancar1" style="margin-top:12px;">Pular e ir para os blocos</button>';
     } else {
       body1.innerHTML = `
         <div style="font-size:12px;color:var(--text-soft);margin-bottom:10px;">
-          Revisando prints do <b>Direcionamento ${anterior.numero}</b>
+          Revisando prints do <b>Direcionamento ${anterior.numero}</b> — do mais antigo ao mais recente.
+          <a href="/aluno/prints.html" style="color:var(--g1);font-weight:600;margin-left:6px;">Abrir prints →</a>
         </div>
         ${blocsComPrints.map(b=>`
           <div class="dia-print-mini">
-            <div class="print-thumb">📄</div>
+            <div class="print-thumb" style="background:var(--g-soft);color:var(--g1);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">P</div>
             <div>
               <div class="tag">${b.disciplina}</div>
-              <div class="disc">${b.prints_count} print${b.prints_count>1?'s':''} · <a href="/aluno/prints.html" style="color:var(--g1);font-weight:600;">Ver na aba Prints</a></div>
+              <div class="disc">${b.count} print${b.count>1?'s':''}</div>
             </div>
           </div>`).join('')}
         <button class="btn small" id="diaAvancar1" style="margin-top:12px;">Marcar revisão como concluída</button>`;
     }
-    document.getElementById('diaAvancar1').onclick = ()=>{ diaEtapa=2; renderDiaModal(); };
+    document.getElementById('diaAvancar1').onclick = async ()=>{ diaEtapa=2; await renderDiaModal(); };
   }
 
   const body2 = document.getElementById('diaBody2');

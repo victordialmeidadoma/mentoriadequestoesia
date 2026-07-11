@@ -39,15 +39,26 @@
     <div class="section-head"><h2>Alunos</h2><button class="btn small" id="cadastrarAlunoBtn">Cadastrar aluno</button></div>
     <div id="alunoListMentor"></div>
     <div id="detalheAlunoMentor" style="display:none;margin-top:30px;">
-      <div class="section-head"><h2 id="detalheNome">—</h2><button class="btn ghost small" id="fecharDetalheBtn">Fechar</button></div>
+      <div class="section-head">
+        <h2 id="detalheNome">—</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn ghost small" id="editarPerfilAlunoBtn">Editar perfil</button>
+          <button class="btn ghost small" id="fecharDetalheBtn">Fechar</button>
+        </div>
+      </div>
       <div class="grid grid-3" style="margin-bottom:18px;">
         <div class="card stat-card"><div class="label">Progresso</div><div class="value" id="dPct">—</div></div>
         <div class="card stat-card"><div class="label">Blocos feitos</div><div class="value" id="dBlocosFeitos">—</div></div>
         <div class="card stat-card"><div class="label">Aproveitamento</div><div class="value" id="dAproveitamento">—</div></div>
       </div>
-      <div class="section-head"><h2>Blocos da semana</h2><button class="btn small" id="abrirImportarBlocos">Importar blocos (CSV)</button></div>
+      <div class="section-head">
+        <h2>Blocos</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="importarDirecSelect" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--white);font-family:Inter;"></select>
+          <button class="btn small" id="abrirImportarBlocos">Importar CSV</button>
+        </div>
+      </div>
       <div class="card" style="margin-top:18px;">
-        <div style="font-size:13px;color:var(--text-soft);margin-bottom:8px;">Blocos da semana</div>
         <div class="bloco-list" id="detalheBlocoList"></div>
       </div>
     </div>
@@ -71,6 +82,21 @@
 </div>
 
 <!-- Modal importar blocos -->
+<!-- Modal editar perfil do aluno -->
+<div class="modal-overlay" id="editarPerfilModal" style="display:none;">
+  <div class="modal">
+    <h3 class="display">Editar perfil do aluno</h3>
+    <label>Nome completo</label>
+    <input type="text" id="editNome" placeholder="Nome do aluno">
+    <label>Foco / carreiras <span style="font-size:11px;color:var(--text-soft);">(separar por vírgula)</span></label>
+    <input type="text" id="editCarreiras" placeholder="Ex: Autoridade e Controle, Procuradorias">
+    <div class="modal-actions">
+      <button class="btn ghost" id="editarPerfilCancelar">Cancelar</button>
+      <button class="btn" id="editarPerfilConfirmar">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="importarBlocosModal" style="display:none;">
   <div class="modal modal-lg">
     <h3 class="display">Importar blocos</h3>

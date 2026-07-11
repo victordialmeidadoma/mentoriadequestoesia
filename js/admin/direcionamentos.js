@@ -77,20 +77,34 @@ function renderMDirecList(){
         </div>
         <div class="carreira">${d.carreira}</div>
         <div class="sub">${d.periodo||''} · ${feitos}/${meta} blocos</div>
-      </div>`;
+      </div>
+      <button class="btn ghost small" data-excluir-direc="${d.id}" style="color:#B5503A;border-color:#F5DDD9;flex-shrink:0;">Excluir</button>`;
     list.appendChild(div);
   });
 }
 
 async function init(){
   const ok = await carregarSessao('mentor');
-  if(!ok) return;
+  if(!ok){ esconderLoading(); document.body.innerHTML='<div style="padding:40px;text-align:center;font-family:Inter"><h2>Erro de autenticação</h2><p>Verifique o console (F12) e reporte o erro.</p><a href="/admin/alunos.html">Voltar</a></div>'; return; }
 
   document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
 
   // Handlers dentro do init para garantir que o DOM está pronto
   document.getElementById('mDirecFecharBtn').onclick =
     ()=>document.getElementById('mDirecDetalhe').style.display='none';
+
+  // Excluir direcionamento
+  document.getElementById('mDirecList').addEventListener('click', async e=>{
+    const btn=e.target.closest('[data-excluir-direc]');
+    if(!btn) return;
+    const id=btn.dataset.excluirDirec;
+    const a=alunosMentor[mDirecAlunoIdx];
+    const d=a.direcionamentos.find(x=>x.id===id);
+    if(!confirm(`Excluir o Direcionamento ${d?.numero}? Esta ação remove também todos os blocos associados.`)) return;
+    await _supabase.from('direcionamentos').delete().eq('id',id);
+    await carregarAlunos();
+    showMDirecDetalhe(mDirecAlunoIdx);
+  });
 
   document.getElementById('mDirecNovoBtn').onclick = ()=>{
     const a=alunosMentor[mDirecAlunoIdx];

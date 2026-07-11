@@ -69,20 +69,39 @@ function showDetalheAluno(idx){
   document.getElementById('dPct').innerHTML=pct+'<span class="unit">%</span>';
   document.getElementById('dBlocosFeitos').innerHTML=`${feitos.length}<span class="unit">/ ${meta}</span>`;
   document.getElementById('dAproveitamento').innerHTML=aprov+'<span class="unit">%</span>';
+
+  // Popula select de direcionamentos para importação
+  const sel = document.getElementById('importarDirecSelect');
+  const dirs = a.direcionamentos||[];
+  if(dirs.length){
+    sel.innerHTML = dirs.map(d=>
+      `<option value="${d.id}">Dir. ${d.numero} · ${d.carreira}${d.status==='atual'?' (atual)':''}</option>`
+    ).join('');
+  } else {
+    sel.innerHTML = '<option value="">Nenhum direcionamento</option>';
+  }
+
   renderDetalheBlocoList();
   document.getElementById('detalheAlunoMentor').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function renderDetalheBlocoList(){
   const a=alunosMentor[mentorAlunoIdx];
-  const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
+  const sel=document.getElementById('importarDirecSelect');
+  const direcId=sel?.value;
+  const dir=(a.direcionamentos||[]).find(d=>d.id===direcId) || (a.direcionamentos||[])[0];
   const list=document.getElementById('detalheBlocoList');
   if(!(dir?.blocos||[]).length){
-    list.innerHTML='<div class="empty">Nenhum bloco importado ainda.</div>';
+    list.innerHTML='<div class="empty">Nenhum bloco importado neste direcionamento.</div>';
     return;
   }
   list.innerHTML='';
-  dir.blocos.forEach(b=>{
+  // Ordena por código
+  const blocos=[...(dir.blocos||[])].sort((a,b)=>{
+    const norm=s=>s.replace(/([0-9]+)([A-Za-z]+)/,(_,n,l)=>n.padStart(4,'0')+l.toUpperCase());
+    return norm(a.codigo).localeCompare(norm(b.codigo));
+  });
+  blocos.forEach(b=>{
     const div=document.createElement('div');
     div.className='bloco';
     div.innerHTML=`
@@ -99,6 +118,9 @@ function renderDetalheBlocoList(){
   });
 }
 
+// Atualiza lista ao trocar direcionamento no select
+document.getElementById('importarDirecSelect')?.addEventListener('change', renderDetalheBlocoList);
+
 
 // Modal importar blocos
 
@@ -107,8 +129,9 @@ document.getElementById('importarBtn').onclick = async () => {
   const raw=document.getElementById('csvInput').value.trim();
   if(!raw||mentorAlunoIdx===null) return;
   const a=alunosMentor[mentorAlunoIdx];
-  const dir=(a.direcionamentos||[]).find(d=>d.status==='atual');
-  if(!dir){ alert('Este aluno não tem direcionamento ativo.\nCrie um direcionamento primeiro na aba Direcionamentos.'); return; }
+  const direcId=document.getElementById('importarDirecSelect').value;
+  const dir=(a.direcionamentos||[]).find(d=>d.id===direcId);
+  if(!dir){ alert('Selecione um direcionamento.'); return; }
   const linhas=raw.split('\n').map(l=>l.replace(/\r$/,'')).filter(l=>l.trim());
   // Detecta separador e formato
   const header=linhas[0].toLowerCase();
@@ -179,6 +202,25 @@ async function init(){
 
   document.getElementById('fecharDetalheBtn').onclick =
     ()=>document.getElementById('detalheAlunoMentor').style.display='none';
+
+  // Editar perfil do aluno
+  document.getElementById('editarPerfilAlunoBtn').onclick = ()=>{
+    const a=alunosMentor[mentorAlunoIdx];
+    document.getElementById('editNome').value = a.nome||'';
+    document.getElementById('editCarreiras').value = (a.carreiras||[]).join(', ');
+    document.getElementById('editarPerfilModal').style.display='flex';
+  };
+  document.getElementById('editarPerfilCancelar').onclick =
+    ()=>document.getElementById('editarPerfilModal').style.display='none';
+  document.getElementById('editarPerfilConfirmar').onclick = async ()=>{
+    const a=alunosMentor[mentorAlunoIdx];
+    const nome=document.getElementById('editNome').value.trim();
+    const carreiras=document.getElementById('editCarreiras').value.split(',').map(s=>s.trim()).filter(Boolean);
+    await _supabase.from('perfis').update({nome,carreiras}).eq('id',a.id);
+    document.getElementById('editarPerfilModal').style.display='none';
+    await carregarAlunos();
+    showDetalheAluno(mentorAlunoIdx);
+  };
 
   document.getElementById('abrirImportarBlocos').onclick=()=>{
     document.getElementById('csvInput').value='';

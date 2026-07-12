@@ -16,7 +16,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-se
 .display{font-family:'Outfit',sans-serif;}
 
 /* Topbar */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--white);border-bottom:1px solid var(--line);}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:var(--white);border-bottom:1px solid var(--line);flex-wrap:nowrap;gap:12px;}
 .brand{display:flex;align-items:center;gap:11px;}
 .seal{width:36px;height:36px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Outfit';font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(11,110,79,.28);}
 .brand-text .t1{font-family:'Outfit';font-size:17px;font-weight:700;color:var(--ink);}

@@ -198,7 +198,7 @@ async function init(){
   const ok = await carregarSessao('mentor');
   if(!ok){ esconderLoading(); document.body.innerHTML='<div style="padding:40px;text-align:center;font-family:Inter"><h2>Erro de autenticação</h2><p>Verifique o console (F12) e reporte o erro.</p><a href="/admin/alunos.html">Voltar</a></div>'; return; }
 
-  document.getElementById('userEmailLabel').textContent = perfilAtual?.nome || usuarioAtual.email;
+  const _lbl = document.getElementById('userEmailLabel'); if(_lbl) _lbl.textContent = perfilAtual?.nome || usuarioAtual.email;
 
   document.getElementById('fecharDetalheBtn').onclick =
     ()=>document.getElementById('detalheAlunoMentor').style.display='none';

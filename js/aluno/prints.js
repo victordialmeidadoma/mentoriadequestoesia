@@ -318,7 +318,7 @@ document.getElementById('uploadPrintsConfirmar').onclick = async () => {
 async function init() {
   const ok = await carregarSessao('aluno');
   if(!ok) return;
-  document.getElementById('userEmailLabel').textContent = perfilAtual?.nome || usuarioAtual.email;
+  const _lbl = document.getElementById('userEmailLabel'); if(_lbl) _lbl.textContent = perfilAtual?.nome || usuarioAtual.email;
   esconderLoading();
   document.getElementById('appShell').style.display = 'block';
   await carregarMaterias();

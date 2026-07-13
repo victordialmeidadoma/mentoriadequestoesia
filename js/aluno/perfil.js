@@ -16,7 +16,7 @@ async function init(){
   document.getElementById('infoCarreiras').textContent = (perfilAtual.carreiras||[]).join(', ') || '—';
   document.getElementById('infoInicio').textContent = perfilAtual.created_at
     ? new Date(perfilAtual.created_at).toLocaleDateString('pt-BR',{month:'short',year:'numeric'}) : '—';
-  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+  document.getElementById('userEmailLabel').textContent = perfilAtual?.nome || usuarioAtual.email;
 
   const { data: dirs } = await _supabase
     .from('direcionamentos').select('*, blocos(*)')

@@ -233,7 +233,7 @@ document.getElementById('printsModalConfirmar').onclick = async ()=>{
 async function init(){
   const ok = await carregarSessao('aluno');
   if(!ok) return;
-  document.getElementById('userEmailLabel').textContent = usuarioAtual.email;
+  document.getElementById('userEmailLabel').textContent = perfilAtual?.nome || usuarioAtual.email;
   await carregarBlocos();
   esconderLoading();
   document.getElementById('appShell').style.display = 'block';

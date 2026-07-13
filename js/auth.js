@@ -1,3 +1,5 @@
+// auth.js
+
 let usuarioAtual = null;
 let perfilAtual = null;
 
@@ -18,18 +20,37 @@ async function carregarSessao(roleEsperado) {
     const { data } = await _supabase.auth.refreshSession();
     session = data?.session;
   }
-  if (!session) { window.location.href = '/login.html'; return false; }
+  if (!session) {
+    window.location.href = '/login.html';
+    return false;
+  }
+
   usuarioAtual = session.user;
+
   const { data: perfil, error } = await _supabase
-    .from('perfis').select('*').eq('id', usuarioAtual.id).maybeSingle();
+    .from('perfis')
+    .select('*')
+    .eq('id', usuarioAtual.id)
+    .maybeSingle();
+
+  console.log('[AUTH] userId:', usuarioAtual.id);
   console.log('[AUTH] perfil:', JSON.stringify(perfil));
   console.log('[AUTH] error:', JSON.stringify(error));
   console.log('[AUTH] roleEsperado:', roleEsperado);
-  if (!perfil) { window.location.href = '/login.html'; return false; }
-  perfilAtual = perfil;
-  if (roleEsperado && perfil.role !== roleEsperado) {
-    console.log('[AUTH] role errado:', perfil.role);
+
+  if (!perfil) {
+    console.log('[AUTH] Sem perfil — indo para login');
+    window.location.href = '/login.html';
     return false;
   }
+
+  perfilAtual = perfil;
+
+  if (roleEsperado && perfil.role !== roleEsperado) {
+    console.log('[AUTH] Role errado:', perfil.role, '!= esperado:', roleEsperado);
+    // Não redireciona — deixa a página tratar
+    return false;
+  }
+
   return true;
 }
